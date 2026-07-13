@@ -9,6 +9,10 @@
   --border: #252527;
   --text: #f4f4f5;
   --muted: #85858b;
+  --reveal-x: 50%;
+  --reveal-y: 50%;
+  --reveal-pill-x: 70px;
+  --reveal-pill-y: 18px;
 }
 
 * { box-sizing: border-box; }
@@ -16,17 +20,203 @@ html { background: var(--bg); }
 body { margin: 0; color: var(--text); background: var(--bg); font-family: "DM Sans", sans-serif; }
 button, input, select { font: inherit; }
 button { color: inherit; }
-.app-shell { min-height: 100vh; display: flex; background: radial-gradient(circle at 75% -10%, rgba(109, 4, 11, .13), transparent 30%), var(--bg); }
+.landing-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background:
+    linear-gradient(rgba(5, 5, 6, .34), rgba(5, 5, 6, .34)),
+    url("/lumi-verse-landing.jpeg") center center / cover no-repeat,
+    #050506;
+  isolation: isolate;
+  transition: opacity .75s ease, filter .75s ease;
+}
+.landing-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("/lumi-verse-landing.jpeg") center center / min(108vw, calc(108vh * 1.7778)) auto no-repeat;
+  filter: brightness(1.08) contrast(1.05);
+  opacity: 1;
+  pointer-events: none;
+  transform-origin: var(--reveal-x) var(--reveal-y);
+  transition: transform .85s cubic-bezier(.22, 1, .36, 1), filter .85s ease, opacity .85s ease;
+}
+.landing-screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 42px rgba(0, 0, 0, .24);
+  transition: background .85s ease, box-shadow .85s ease;
+}
+.landing-hero {
+  position: relative;
+  z-index: 1;
+  width: min(100vw, calc(100vh * 1.7778));
+  aspect-ratio: 16 / 9;
+  max-height: 100vh;
+}
+.landing-hero button {
+  position: absolute;
+  left: 50%;
+  top: 73%;
+  transform: translate(-50%, -50%);
+  min-height: clamp(38px, 3.2vw, 46px);
+  border: 0;
+  border-radius: 999px;
+  background: #e50914;
+  color: #fff;
+  padding: 0 clamp(24px, 2.7vw, 34px);
+  font-size: clamp(11px, 1vw, 13px);
+  font-weight: 900;
+  letter-spacing: .7px;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 0 22px rgba(229, 9, 20, .48), 0 13px 32px rgba(0, 0, 0, .72);
+  transition: transform .22s ease, background .22s ease, opacity .35s ease, box-shadow .22s ease;
+}
+.landing-hero button:hover {
+  background: #ff1724;
+  transform: translate(-50%, -50%) scale(1.04);
+}
+.landing-hero button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 4px;
+}
+.landing-screen.is-entering {
+  opacity: 1;
+  filter: saturate(1.08);
+  pointer-events: none;
+  animation: landingExit 3s ease both;
+}
+.landing-screen.is-entering::before {
+  transform: scale(1.08);
+  filter: brightness(1.18) contrast(1.08);
+  opacity: .88;
+}
+.landing-screen.is-entering::after {
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, .42);
+}
+
+@keyframes landingExit {
+  0%, 68% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.landing-screen.is-entering .landing-hero button {
+  opacity: 0;
+  pointer-events: none;
+  transition: none;
+}
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  position: relative;
+  z-index: 1;
+  background: radial-gradient(circle at 75% -10%, rgba(109, 4, 11, .13), transparent 30%), var(--bg);
+  animation: appReveal .55s ease both;
+}
+.app-shell.is-waiting {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  opacity: 0;
+  transform: scale(.94);
+  filter: blur(14px);
+  transform-origin: center center;
+  clip-path: inset(
+    calc(50vh - var(--reveal-pill-y))
+    calc(50vw - var(--reveal-pill-x))
+    calc(50vh - var(--reveal-pill-y))
+    calc(50vw - var(--reveal-pill-x))
+    round 999px
+  );
+}
+.app-shell.is-revealing {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  z-index: 110;
+  pointer-events: none;
+  transform-origin: center center;
+  animation: appCenterReveal 3s cubic-bezier(.19, 1, .22, 1) both;
+}
+
+@keyframes appCenterReveal {
+  0% {
+    clip-path: inset(
+      calc(50vh - var(--reveal-pill-y))
+      calc(50vw - var(--reveal-pill-x))
+      calc(50vh - var(--reveal-pill-y))
+      calc(50vw - var(--reveal-pill-x))
+      round 999px
+    );
+    opacity: 0;
+    transform: scale(.94);
+    filter: blur(14px);
+  }
+  38% {
+    opacity: 1;
+    filter: blur(7px);
+  }
+  100% {
+    clip-path: inset(0 0 0 0 round 0);
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes appReveal {
+  from {
+    opacity: 0;
+    transform: scale(.985) translateY(14px);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes starOpen {
+  0% {
+    clip-path: circle(0% at var(--reveal-x) var(--reveal-y));
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    clip-path: circle(145% at var(--reveal-x) var(--reveal-y));
+    opacity: 0;
+  }
+}
 
 .sidebar {
   width: 232px; position: fixed; inset: 0 auto 0 0; border-right: 1px solid var(--border); background: #0b0b0c;
   padding: 27px 16px 20px; display: flex; flex-direction: column; z-index: 20;
 }
 .side-top { display: flex; align-items: center; justify-content: space-between; }
-.logo { display: flex; align-items: center; gap: 11px; font: 800 16px/1 "Manrope"; letter-spacing: 1.4px; padding-left: 5px; }
-.logo > span:last-child > span { color: var(--red); }
-.logo-mark { width: 23px; height: 27px; display: block; position: relative; border-left: 6px solid #b20710; border-right: 6px solid var(--red); }
-.logo-mark span { position: absolute; width: 6px; height: 29px; left: 5px; top: -1px; background: #e50914; transform: skew(20deg); box-shadow: -2px 0 5px #000; }
+.logo { display: flex; align-items: center; padding-left: 0; }
+.logo img { width: 176px; height: auto; display: block; object-fit: contain; mix-blend-mode: screen; }
 .close-menu { display: none; border: 0; background: none; }
 .sidebar nav { margin-top: 39px; flex: 1; }
 .sidebar nav p { color: #56565b; font-size: 9px; font-weight: 700; letter-spacing: 1.7px; margin: 21px 11px 10px; }
@@ -312,6 +502,7 @@ h1 { margin: 0 0 7px; font: 700 clamp(24px, 2.3vw, 33px) "Manrope"; letter-spaci
 @media (max-width: 1050px) {
   .header-brand { display: flex; }
   .header-brand .logo { padding-left: 0; }
+  .header-brand .logo img { width: 148px; }
   .search { width: min(430px, 44vw); }
   .stats-grid { grid-template-columns: repeat(2,1fr); }
   .title-grid { grid-template-columns: repeat(2,1fr); }
@@ -340,6 +531,23 @@ h1 { margin: 0 0 7px; font: 700 clamp(24px, 2.3vw, 33px) "Manrope"; letter-spaci
   .episode-row { grid-template-columns:112px 1fr; }
 }
 @media (max-width: 520px) {
+  .landing-screen {
+    background:
+      linear-gradient(rgba(5, 5, 6, .34), rgba(5, 5, 6, .34)),
+      url("/lumi-verse-landing.jpeg") center center / cover no-repeat,
+      #050506;
+  }
+  .landing-screen::before {
+    background-size: auto 108%;
+  }
+  .landing-hero {
+    width: min(100vw, calc(100vh * 1.7778));
+    max-height: 100vh;
+  }
+  .landing-hero button {
+    left: 50%;
+    top: 73%;
+  }
   .history-summary { grid-template-columns:1fr; }
   .history-summary button { grid-column:auto; }
   .filters { width:100%; }.filters label,.filters button { flex:1 1 100%;justify-content:space-between; }

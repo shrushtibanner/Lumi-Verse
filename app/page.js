@@ -4,7 +4,7 @@ import {
   Bell, Bookmark, Bot, CheckCircle, ChevronLeft, ChevronRight, Film, Gauge,
   History, LayoutDashboard, Menu, MoreHorizontal, PlayCircle, Search, Sparkles, Star, Trash2, TrendingUp, Tv, X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const preview = [
   { id: 1, name: "Dune: Part Two", type: "Movie", mediaType: "movie", year: "2024", rating: 8.2, votes: 650000, popularity: 286, genres: ["Science Fiction", "Adventure"], poster: null },
@@ -40,7 +40,7 @@ const lumiCategories = [
 ];
 
 function Logo() {
-  return <div className="logo"><span className="logo-mark"><span /></span><span>CINE<span>SCOPE</span></span></div>;
+  return <div className="logo"><img src="/lumiverse-logo.png" alt="LumiVerse" width="492" height="160" /></div>;
 }
 
 function PosterFallback({ item }) {
@@ -60,6 +60,8 @@ function formatWatchedAt(value) {
 }
 
 export default function Home() {
+  const [showLanding, setShowLanding] = useState(true);
+  const [enteringApp, setEnteringApp] = useState(false);
   const [section, setSection] = useState("Overview");
   const [mobileNav, setMobileNav] = useState(false);
   const [query, setQuery] = useState("");
@@ -91,9 +93,15 @@ export default function Home() {
   const [recommendationsError, setRecommendationsError] = useState("");
   const [episodesLoading, setEpisodesLoading] = useState(false);
   const [episodeError, setEpisodeError] = useState("");
+  const searchInputRef = useRef(null);
 
   const view = section === "Movies" ? "movie" : section === "Series" ? "tv" : "all";
-  const nav = [["Overview", LayoutDashboard], ["Movies", Film], ["Series", Tv], ["Trends", TrendingUp]];
+  const nav = [
+    { section: "Overview", label: "Home", Icon: LayoutDashboard },
+    { section: "Movies", label: "Movies", Icon: Film },
+    { section: "Series", label: "TV Shows", Icon: Tv },
+    { section: "Trends", label: "Trends", Icon: TrendingUp },
+  ];
   const searchTerm = query.trim();
   const hasActiveFilters = filters.genre || filters.country || filters.language || filters.sort !== "popularity.desc";
   const tmdbPage = searchTerm || hasActiveFilters ? page + 1 : 1;
@@ -235,6 +243,10 @@ export default function Home() {
     : TMDB_RESULTS_PER_PAGE;
 
   const selectSection = (label) => { setSection(label); setMobileNav(false); setPage(0); };
+  const focusSearch = () => {
+    setMobileNav(false);
+    window.setTimeout(() => searchInputRef.current?.focus(), 0);
+  };
   const toggleWatchlist = (item) => {
     const key = `${item.mediaType}-${item.id}`;
     setWatchlist((current) => current.includes(key) ? current.filter((id) => id !== key) : [...current, key]);
@@ -363,16 +375,34 @@ export default function Home() {
   };
   const updateFilter = (key, value) => setFilters((current) => ({ ...current, [key]: value }));
   const resetFilters = () => setFilters({ genre: "", country: "", language: "", sort: "popularity.desc" });
+  const enterApp = () => {
+    if (enteringApp) return;
+    setEnteringApp(true);
+    window.setTimeout(() => {
+      setShowLanding(false);
+      setEnteringApp(false);
+    }, 3000);
+  };
 
   return (
-    <main className="app-shell">
+    <>
+    {showLanding && (
+      <main className={`landing-screen ${enteringApp ? "is-entering" : ""}`}>
+        <div className="landing-hero">
+          <button type="button" onClick={enterApp} disabled={enteringApp}>Enter</button>
+        </div>
+      </main>
+    )}
+
+    <main className={`app-shell ${showLanding ? "is-waiting" : ""} ${enteringApp ? "is-revealing" : ""}`}>
       <aside className={`sidebar ${mobileNav ? "open" : ""}`}>
         <div className="side-top"><Logo /><button className="close-menu" onClick={() => setMobileNav(false)} aria-label="Close menu"><X size={20} /></button></div>
         <nav>
           <p>DISCOVER</p>
-          {nav.map(([label, Icon]) => <button key={label} className={section === label ? "active" : ""} onClick={() => selectSection(label)}><Icon size={19} /><span>{label}</span></button>)}
+          <button onClick={focusSearch}><Search size={19} /><span>Search</span></button>
+          {nav.map(({ section: navSection, label, Icon }) => <button key={navSection} className={section === navSection ? "active" : ""} onClick={() => selectSection(navSection)}><Icon size={19} /><span>{label}</span></button>)}
           <p>LIBRARY</p>
-          <button className={section === "My Watchlist" ? "active" : ""} onClick={() => selectSection("My Watchlist")}><Bookmark size={19} /><span>My Watchlist</span><em>{watchlist.length}</em></button>
+          <button className={section === "My Watchlist" ? "active" : ""} onClick={() => selectSection("My Watchlist")}><Bookmark size={19} /><span>Wishlist</span><em>{watchlist.length}</em></button>
           <button className={section === "Watch History" ? "active" : ""} onClick={() => selectSection("Watch History")}><History size={19} /><span>Watch History</span><em>{historyItems.length}</em></button>
         </nav>
         <div className="insight-card">
@@ -389,7 +419,7 @@ export default function Home() {
         <header>
           <button className="menu-button" onClick={() => setMobileNav(true)} aria-label="Open menu"><Menu /></button>
           <div className="header-brand"><Logo /></div>
-          <div className="search"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search TMDB movies and series..." aria-label="Search" />{query && <button onClick={() => setQuery("")} aria-label="Clear search"><X size={14} /></button>}</div>
+          <div className="search"><Search size={18} /><input ref={searchInputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search TMDB movies and series..." aria-label="Search" />{query && <button onClick={() => setQuery("")} aria-label="Clear search"><X size={14} /></button>}</div>
           <button className="notification" aria-label="Notifications"><Bell size={20} /><i /></button><div className="header-avatar">AS</div>
         </header>
 
@@ -572,6 +602,7 @@ export default function Home() {
           </div>
       </div>}
     </main>
+    </>
   );
 }
 
