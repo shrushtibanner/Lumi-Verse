@@ -512,8 +512,8 @@ export default function Home() {
         </div>
       </section>
 
-      {lumiOpen && <button className="lumi-blur" onClick={() => setLumiOpen(false)} aria-label="Close Lumi overlay" />}
-      <div className={`lumi-floating ${lumiOpen ? "expanded" : ""}`}>
+      {!showLanding && lumiOpen && <button className="lumi-blur" onClick={() => setLumiOpen(false)} aria-label="Close Lumi overlay" />}
+      {!showLanding && <div className={`lumi-floating ${lumiOpen ? "expanded" : ""}`}>
         {lumiOpen && <div className="lumi-expanded" role="dialog" aria-label="Lumi mood assistant">
           <div className="lumi-type-toggle" aria-label="Lumi media type">
             <button className={lumiMediaType === "movie" ? "active" : ""} onClick={() => selectLumiMediaType("movie")} type="button"><Film size={15} /> Movies</button>
@@ -552,7 +552,7 @@ export default function Home() {
           <Bot size={20} />
           <span>Lumi</span>
         </button>}
-      </div>
+      </div>}
 
       {recommendationModal && <div className="recommendation-overlay" role="dialog" aria-modal="true" aria-label={`More like ${recommendationModal.name}`}>
         <div className="recommendation-panel">
