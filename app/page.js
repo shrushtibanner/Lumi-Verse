@@ -19,6 +19,7 @@ const countryOptions = [["", "All countries"], ["IN", "India"], ["US", "United S
 const languageOptions = [["", "All languages"], ["en", "English"], ["hi", "Hindi"], ["ta", "Tamil"], ["te", "Telugu"], ["ko", "Korean"], ["ja", "Japanese"], ["fr", "French"], ["es", "Spanish"]];
 const sortOptions = [["popularity.desc", "Most popular"], ["vote_average.desc", "Top rated"], ["primary_release_date.desc", "Newest"]];
 const WATCH_HISTORY_KEY = "cinescope-watch-history";
+const RECENT_SEARCH_RESULTS_KEY = "lumiverse-recent-search-results";
 const lumiCategories = [
   { key: "popular", emoji: "🍿", label: "Popular Now" },
   { key: "top-rated", emoji: "⭐", label: "Top Rated" },
@@ -93,9 +94,11 @@ export default function Home() {
   const [recommendationsError, setRecommendationsError] = useState("");
   const [episodesLoading, setEpisodesLoading] = useState(false);
   const [episodeError, setEpisodeError] = useState("");
+  const [recentSearchResults, setRecentSearchResults] = useState([]);
   const searchInputRef = useRef(null);
 
   const view = section === "Movies" ? "movie" : section === "Series" ? "tv" : "all";
+  const isSearchSection = section === "Search";
   const nav = [
     { section: "Overview", label: "Home", Icon: LayoutDashboard },
     { section: "Movies", label: "Movies", Icon: Film },
@@ -115,6 +118,15 @@ export default function Home() {
       setWatchHistory({});
     } finally {
       setHistoryReady(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      const savedResults = localStorage.getItem(RECENT_SEARCH_RESULTS_KEY);
+      if (savedResults) setRecentSearchResults(JSON.parse(savedResults));
+    } catch {
+      setRecentSearchResults([]);
     }
   }, []);
 
@@ -222,14 +234,17 @@ export default function Home() {
   }, [recommendationModal]);
 
   const visibleItems = useMemo(() => {
+    if (isSearchSection && !searchTerm) return recentSearchResults;
     if (section === "Lumi Picks") return lumiResults.slice(page * CARDS_PER_PAGE, page * CARDS_PER_PAGE + CARDS_PER_PAGE);
     if (section === "Watch History") return historyItems.slice(page * CARDS_PER_PAGE, page * CARDS_PER_PAGE + CARDS_PER_PAGE).map((entry) => entry.item);
     if (section === "My Watchlist") return items.filter((item) => watchlist.includes(`${item.mediaType}-${item.id}`));
     if (searchTerm || hasActiveFilters) return items;
     return items.slice(page * CARDS_PER_PAGE, page * CARDS_PER_PAGE + CARDS_PER_PAGE);
-  }, [hasActiveFilters, historyItems, items, lumiResults, page, searchTerm, section, watchlist]);
+  }, [hasActiveFilters, historyItems, isSearchSection, items, lumiResults, page, recentSearchResults, searchTerm, section, watchlist]);
 
-  const pageableTotal = section === "My Watchlist"
+  const pageableTotal = isSearchSection && !searchTerm
+    ? recentSearchResults.length
+    : section === "My Watchlist"
     ? items.filter((item) => watchlist.includes(`${item.mediaType}-${item.id}`)).length
     : section === "Watch History"
       ? historyItems.length
@@ -243,7 +258,30 @@ export default function Home() {
     : TMDB_RESULTS_PER_PAGE;
 
   const selectSection = (label) => { setSection(label); setMobileNav(false); setPage(0); };
+  const rememberSearchResults = (results = items) => {
+    if (!isSearchSection || !searchTerm || !results.length) return;
+    setRecentSearchResults((current) => {
+      const seen = new Set();
+      const next = [...results, ...current]
+        .filter((item) => {
+          const key = `${item.mediaType}-${item.id}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .slice(0, 12);
+      localStorage.setItem(RECENT_SEARCH_RESULTS_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+  useEffect(() => {
+    if (!isSearchSection || !searchTerm || loading) return;
+    rememberSearchResults(items);
+  }, [isSearchSection, items, loading, searchTerm]);
   const focusSearch = () => {
+    setSection("Search");
+    setQuery("");
+    setPage(0);
     setMobileNav(false);
     window.setTimeout(() => searchInputRef.current?.focus(), 0);
   };
@@ -394,12 +432,12 @@ export default function Home() {
       </main>
     )}
 
-    <main className={`app-shell ${showLanding ? "is-waiting" : ""} ${enteringApp ? "is-revealing" : ""}`}>
+    <main className={`app-shell ${isSearchSection ? "is-search-page" : ""} ${showLanding ? "is-waiting" : ""} ${enteringApp ? "is-revealing" : ""}`}>
       <aside className={`sidebar ${mobileNav ? "open" : ""}`}>
         <div className="side-top"><Logo /><button className="close-menu" onClick={() => setMobileNav(false)} aria-label="Close menu"><X size={20} /></button></div>
         <nav>
           <p>DISCOVER</p>
-          <button onClick={focusSearch}><Search size={19} /><span>Search</span></button>
+          <button className={`search-nav ${section === "Search" ? "active" : ""}`} onClick={focusSearch}><Search size={19} /><span>Search</span></button>
           {nav.map(({ section: navSection, label, Icon }) => <button key={navSection} className={section === navSection ? "active" : ""} onClick={() => selectSection(navSection)}><Icon size={19} /><span>{label}</span></button>)}
           <p>LIBRARY</p>
           <button className={section === "My Watchlist" ? "active" : ""} onClick={() => selectSection("My Watchlist")}><Bookmark size={19} /><span>Wishlist</span><em>{watchlist.length}</em></button>
@@ -416,18 +454,19 @@ export default function Home() {
       {mobileNav && <button className="scrim" onClick={() => setMobileNav(false)} aria-label="Close menu" />}
 
       <section className="workspace">
-        <header>
-          <button className="menu-button" onClick={() => setMobileNav(true)} aria-label="Open menu"><Menu /></button>
-          <div className="header-brand"><Logo /></div>
-          <div className="search"><Search size={18} /><input ref={searchInputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search TMDB movies and series..." aria-label="Search" />{query && <button onClick={() => setQuery("")} aria-label="Clear search"><X size={14} /></button>}</div>
-          <button className="notification" aria-label="Notifications"><Bell size={20} /><i /></button><div className="header-avatar">AS</div>
-        </header>
-
         <div className="content">
-          <div className="title-row">
-            <div><p className="eyebrow">TMDB ANALYTICS</p><h1>{section === "Overview" ? "Movie & Series Intelligence" : section}</h1><span>{section === "Lumi Picks" ? `Lumi found ${lumiMood.toLowerCase()} picks for "${lumiInput}".` : query ? `Search results for “${query}”` : "This week’s trending entertainment data."}</span></div>
+          {!isSearchSection && section !== "Overview" && <div className="title-row">
+            <div><p className="eyebrow">TMDB ANALYTICS</p><h1>{section === "Overview" ? "Movie & Series Intelligence" : section}</h1><span>{isSearchSection ? searchTerm ? `Search results for “${query}”` : "Start typing in the search bar to find movies and TV shows." : section === "Lumi Picks" ? `Lumi found ${lumiMood.toLowerCase()} picks for "${lumiInput}".` : query ? `Search results for “${query}”` : "This week’s trending entertainment data."}</span></div>
             <div className="live-badge"><i /> LIVE DATA</div>
-          </div>
+          </div>}
+
+          {isSearchSection && <>
+            <form className="search-page-bar" onSubmit={(event) => { event.preventDefault(); rememberSearchResults(); }}>
+              <Search size={20} />
+              <input ref={searchInputRef} value={query} onChange={(event) => setQuery(event.target.value)} onBlur={() => rememberSearchResults()} placeholder="Search movies and TV shows..." aria-label="Search movies and TV shows" />
+              {query && <button type="button" onClick={() => setQuery("")} aria-label="Clear search"><X size={16} /></button>}
+            </form>
+          </>}
 
           {error && <div className="api-notice"><div><b>Connect TMDB to load live data</b><span>{error}. Preview data is displayed for now.</span></div><a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noreferrer">Get credentials →</a></div>}
 
@@ -437,7 +476,7 @@ export default function Home() {
             <button disabled={!historyItems.length} onClick={clearHistory}><Trash2 size={14} /> Clear history</button>
           </div>}
 
-          {section !== "Watch History" && section !== "Lumi Picks" && <div className="filters" aria-label="Catalog filters">
+          {section !== "Watch History" && section !== "Lumi Picks" && !isSearchSection && <div className="filters" aria-label="Catalog filters">
             <label><span>Genre</span><select value={filters.genre} onChange={(event) => updateFilter("genre", event.target.value)}><option value="">All genres</option>{genreOptions.map((genre) => <option key={genre.id} value={genre.id}>{genre.name}</option>)}</select></label>
             <label><span>Country</span><select value={filters.country} onChange={(event) => updateFilter("country", event.target.value)}>{countryOptions.map(([value, label]) => <option key={value || "all"} value={value}>{label}</option>)}</select></label>
             <label><span>Language</span><select value={filters.language} onChange={(event) => updateFilter("language", event.target.value)}>{languageOptions.map(([value, label]) => <option key={value || "all"} value={value}>{label}</option>)}</select></label>
@@ -446,12 +485,12 @@ export default function Home() {
           </div>}
 
           <section className="trending-section">
-            <div className="section-head"><div><h3>{section === "Lumi Picks" ? `${lumiMood || "Mood"} Picks` : query ? "Search Results" : section === "My Watchlist" ? "Saved Titles" : section === "Watch History" ? "Recently Watched" : "Trending This Week"}</h3><p>{section === "Lumi Picks" ? "Movies and series matched to your mood by Lumi" : section === "Watch History" ? "Titles you marked as watched on this device" : "Ratings, popularity and audience votes from TMDB"}</p></div><div className="pager"><button disabled={page === 0} onClick={() => setPage((value) => Math.max(value - 1, 0))}><ChevronLeft size={15} /></button><span>{page + 1}</span><button disabled={(page + 1) * activePageSize >= pageableTotal} onClick={() => setPage((value) => value + 1)}><ChevronRight size={15} /></button></div></div>
-            <div className={`tmdb-grid ${loading || lumiLoading ? "is-loading" : ""}`}>
+            {(!isSearchSection || searchTerm || recentSearchResults.length > 0) && <div className="section-head"><div><h3>{isSearchSection ? searchTerm ? "Search Results" : "Recently Searched" : section === "Lumi Picks" ? `${lumiMood || "Mood"} Picks` : query ? "Search Results" : section === "My Watchlist" ? "Saved Titles" : section === "Watch History" ? "Recently Watched" : "Trending This Week"}</h3><p>{isSearchSection ? "" : section === "Lumi Picks" ? "Movies and series matched to your mood by Lumi" : section === "Watch History" ? "Titles you marked as watched on this device" : "Ratings, popularity and audience votes from TMDB"}</p></div>{(!isSearchSection || searchTerm) && <div className="pager"><button disabled={page === 0} onClick={() => setPage((value) => Math.max(value - 1, 0))}><ChevronLeft size={15} /></button><span>{page + 1}</span><button disabled={(page + 1) * activePageSize >= pageableTotal} onClick={() => setPage((value) => value + 1)}><ChevronRight size={15} /></button></div>}</div>}
+            <div className={`tmdb-grid ${isSearchSection ? "search-results-grid" : ""} ${loading || lumiLoading ? "is-loading" : ""}`}>
               {visibleItems.map((item, index) => {
                 const key = `${item.mediaType}-${item.id}`;
                 const watchedEntry = watchHistory[key];
-                return <article className="tmdb-card" key={key}>
+                return <article className="tmdb-card" key={key} style={isSearchSection ? { "--card-index": index } : undefined}>
                   <div className="tmdb-image" role="button" tabIndex={0} onClick={() => openEpisodes(item)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") openEpisodes(item); }}>{item.poster ? <img src={item.poster} alt={`${item.name} poster`} width="500" height="750" loading="lazy" decoding="async" /> : <PosterFallback item={item} />}<button className={`watched-toggle ${watchedEntry ? "watched" : ""}`} onClick={(event) => { event.stopPropagation(); toggleWatched(item); }} aria-label={`${watchedEntry ? "Mark unwatched" : "Mark watched"}: ${item.name}`} title={watchedEntry ? "Watched" : "Not watched"}><CheckCircle size={16} fill={watchedEntry ? "currentColor" : "none"} /></button><button className={`save ${watchlist.includes(key) ? "saved" : ""}`} onClick={(event) => { event.stopPropagation(); toggleWatchlist(item); }} aria-label={`Save ${item.name}`}><Bookmark size={16} fill={watchlist.includes(key) ? "currentColor" : "none"} /></button><span className="media-type">{item.type}</span></div>
                   <div className="tmdb-info">
                     <div className="title-actions-row">
@@ -465,7 +504,8 @@ export default function Home() {
                   </div>
                 </article>;
               })}
-              {!loading && !lumiLoading && !visibleItems.length && <div className="empty-state"><Search size={28} /><h3>No titles found</h3><p>{section === "Lumi Picks" ? "Ask Lumi for a mood like funny, romantic, scary, cozy, or thoughtful." : section === "Watch History" ? "Mark titles as watched to build your history." : "Try another search or add titles to your watchlist."}</p></div>}
+              {isSearchSection && !searchTerm && !recentSearchResults.length && <div className="search-blank-screen" />}
+              {!loading && !lumiLoading && visibleItems.length === 0 && (!isSearchSection || searchTerm) && <div className="empty-state"><Search size={28} /><h3>No titles found</h3><p>{section === "Lumi Picks" ? "Ask Lumi for a mood like funny, romantic, scary, cozy, or thoughtful." : section === "Watch History" ? "Mark titles as watched to build your history." : "Try another search or add titles to your watchlist."}</p></div>}
             </div>
             <p className="tmdb-credit">This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
           </section>
