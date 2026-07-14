@@ -1,8 +1,8 @@
 "use client";
 
 import {
-  Bell, Bookmark, Bot, CheckCircle, ChevronLeft, ChevronRight, Film, Gauge,
-  History, LayoutDashboard, Menu, MoreHorizontal, PlayCircle, Search, Sparkles, Star, Trash2, TrendingUp, Tv, X,
+  Bell, Bookmark, Bot, CheckCircle, ChevronLeft, ChevronRight, Clock, Film, Gauge,
+  History, LayoutDashboard, Menu, Moon, MoreHorizontal, PlayCircle, Search, Sparkles, Star, Sun, Trash2, TrendingUp, Tv, X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -20,6 +20,8 @@ const languageOptions = [["", "All languages"], ["en", "English"], ["hi", "Hindi
 const sortOptions = [["popularity.desc", "Most popular"], ["vote_average.desc", "Top rated"], ["primary_release_date.desc", "Newest"]];
 const WATCH_HISTORY_KEY = "cinescope-watch-history";
 const RECENT_SEARCH_RESULTS_KEY = "lumiverse-recent-search-results";
+const THEME_KEY = "lumiverse-theme";
+const chartColors = ["#ff2438", "#3b82ff", "#27b274", "#9a55ff", "#f0bd49"];
 const lumiCategories = [
   { key: "popular", emoji: "🍿", label: "Popular Now" },
   { key: "top-rated", emoji: "⭐", label: "Top Rated" },
@@ -40,8 +42,9 @@ const lumiCategories = [
   { key: "documentary", emoji: "📄", label: "Documentary" },
 ];
 
-function Logo() {
-  return <div className="logo"><img src="/lumiverse-logo.png" alt="LumiVerse" width="492" height="160" /></div>;
+function Logo({ theme = "dark" }) {
+  const logoSrc = theme === "light" ? "/lumiverse-logo-light.png" : "/loo.png";
+  return <div className="logo"><img src={logoSrc} alt="LumiVerse" width="2048" height="682" /></div>;
 }
 
 function PosterFallback({ item }) {
@@ -58,6 +61,13 @@ function formatNumber(value) {
 
 function formatWatchedAt(value) {
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value));
+}
+
+function formatWatchTime(minutes) {
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (!hours) return `${remainingMinutes}m`;
+  return remainingMinutes ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
 }
 
 export default function Home() {
@@ -95,6 +105,7 @@ export default function Home() {
   const [episodesLoading, setEpisodesLoading] = useState(false);
   const [episodeError, setEpisodeError] = useState("");
   const [recentSearchResults, setRecentSearchResults] = useState([]);
+  const [theme, setTheme] = useState("dark");
   const searchInputRef = useRef(null);
 
   const view = section === "Movies" ? "movie" : section === "Series" ? "tv" : "all";
@@ -109,6 +120,123 @@ export default function Home() {
   const hasActiveFilters = filters.genre || filters.country || filters.language || filters.sort !== "popularity.desc";
   const tmdbPage = searchTerm || hasActiveFilters ? page + 1 : 1;
   const historyItems = useMemo(() => Object.values(watchHistory).sort((a, b) => new Date(b.watchedAt) - new Date(a.watchedAt)), [watchHistory]);
+  const dashboardStats = useMemo(() => {
+    const watchedItems = historyItems.map((entry) => entry.item);
+    const totalTitles = watchedItems.length;
+    const totalWatchMinutes = watchedItems.reduce((sum, item) => {
+      if (Number(item.runtime)) return sum + Number(item.runtime);
+      return sum + (item.mediaType === "tv" ? 45 : 120);
+    }, 0);
+    const ratedItems = watchedItems.filter((item) => Number(item.rating) > 0);
+    const averageRating = ratedItems.length
+      ? ratedItems.reduce((sum, item) => sum + Number(item.rating), 0) / ratedItems.length
+      : 0;
+    return {
+      totalTitles,
+      totalWatchTime: formatWatchTime(totalWatchMinutes),
+      seriesCompleted: watchedItems.filter((item) => item.mediaType === "tv").length,
+      averageRating: averageRating ? averageRating.toFixed(1) : "0.0",
+    };
+  }, [historyItems]);
+  const dashboardMediaSplit = useMemo(() => {
+    const movies = historyItems.filter((entry) => entry.item.mediaType === "movie").length;
+    const tvShows = historyItems.filter((entry) => entry.item.mediaType === "tv").length;
+    const total = movies + tvShows;
+    return {
+      movies,
+      tvShows,
+      total,
+      moviePercent: total ? Math.round((movies / total) * 100) : 0,
+      tvPercent: total ? Math.round((tvShows / total) * 100) : 0,
+    };
+  }, [historyItems]);
+  const watchTimeByMonth = useMemo(() => {
+    const monthFormatter = new Intl.DateTimeFormat("en", { month: "short" });
+    const months = Array.from({ length: 6 }, (_, index) => {
+      const date = new Date();
+      date.setDate(1);
+      date.setMonth(date.getMonth() - (5 - index));
+      return {
+        key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`,
+        label: monthFormatter.format(date),
+        hours: 0,
+      };
+    });
+    const monthMap = new Map(months.map((month) => [month.key, month]));
+    historyItems.forEach((entry) => {
+      const watchedDate = new Date(entry.watchedAt);
+      const key = `${watchedDate.getFullYear()}-${String(watchedDate.getMonth() + 1).padStart(2, "0")}`;
+      const month = monthMap.get(key);
+      if (!month) return;
+      const runtime = Number(entry.item.runtime) || (entry.item.mediaType === "tv" ? 45 : 120);
+      month.hours += runtime / 60;
+    });
+    const maxHours = Math.max(1, ...months.map((month) => month.hours));
+    const chartMax = Math.max(10, Math.ceil(maxHours / 10) * 10);
+    return {
+      months: months.map((month, index) => ({
+        ...month,
+        x: 10 + index * 16,
+        y: 90 - (month.hours / chartMax) * 76,
+      })),
+      maxHours: chartMax,
+    };
+  }, [historyItems]);
+  const watchTimePoints = watchTimeByMonth.months.map((month) => `${month.x},${month.y}`).join(" ");
+  const watchTimeAreaPoints = watchTimeByMonth.months.length
+    ? `10,90 ${watchTimePoints} ${watchTimeByMonth.months[watchTimeByMonth.months.length - 1].x},90`
+    : "";
+  const favoriteGenres = useMemo(() => {
+    const counts = new Map();
+    historyItems.forEach((entry) => {
+      (entry.item.genres || []).forEach((genre) => counts.set(genre, (counts.get(genre) || 0) + 1));
+    });
+    const total = Array.from(counts.values()).reduce((sum, count) => sum + count, 0);
+    const genres = Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([name, count], index) => ({
+        name,
+        count,
+        color: chartColors[index],
+        percent: total ? Math.round((count / total) * 100) : 0,
+      }));
+    let offset = 0;
+    const gradient = genres.length
+      ? genres.map((genre) => {
+        const start = offset;
+        offset += genre.percent;
+        return `${genre.color} ${start}% ${offset}%`;
+      }).join(", ")
+      : "#242426 0 100%";
+    return { genres, total, gradient };
+  }, [historyItems]);
+  const activityCalendar = useMemo(() => {
+    const formatter = new Intl.DateTimeFormat("en", { month: "short", day: "numeric" });
+    const counts = new Map();
+    historyItems.forEach((entry) => {
+      const watchedDate = new Date(entry.watchedAt);
+      const key = watchedDate.toISOString().slice(0, 10);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    const days = Array.from({ length: 35 }, (_, index) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (34 - index));
+      const key = date.toISOString().slice(0, 10);
+      const count = counts.get(key) || 0;
+      return {
+        key,
+        count,
+        label: formatter.format(date),
+        level: Math.min(count, 4),
+      };
+    });
+    return {
+      days,
+      activeDays: days.filter((day) => day.count > 0).length,
+      maxCount: Math.max(0, ...days.map((day) => day.count)),
+    };
+  }, [historyItems]);
 
   useEffect(() => {
     try {
@@ -129,6 +257,15 @@ export default function Home() {
       setRecentSearchResults([]);
     }
   }, []);
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem(THEME_KEY);
+    if (savedTheme === "light" || savedTheme === "dark") setTheme(savedTheme);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(THEME_KEY, theme);
+  }, [theme]);
 
   useEffect(() => {
     if (!historyReady) return;
@@ -316,6 +453,7 @@ export default function Home() {
             votes: item.votes,
             popularity: item.popularity,
             genres: item.genres || [],
+            watchProviders: item.watchProviders || item.providers || item.platforms || [],
           },
         },
       };
@@ -432,9 +570,9 @@ export default function Home() {
       </main>
     )}
 
-    <main className={`app-shell ${isSearchSection ? "is-search-page" : ""} ${showLanding ? "is-waiting" : ""} ${enteringApp ? "is-revealing" : ""}`}>
+    <main className={`app-shell ${isSearchSection ? "is-search-page" : ""} ${showLanding ? "is-waiting" : ""} ${enteringApp ? "is-revealing" : ""}`} data-theme={theme}>
       <aside className={`sidebar ${mobileNav ? "open" : ""}`}>
-        <div className="side-top"><Logo /><button className="close-menu" onClick={() => setMobileNav(false)} aria-label="Close menu"><X size={20} /></button></div>
+        <div className="side-top"><Logo theme={theme} /><button className="close-menu" onClick={() => setMobileNav(false)} aria-label="Close menu"><X size={20} /></button></div>
         <nav>
           <p>DISCOVER</p>
           <button className={`search-nav ${section === "Search" ? "active" : ""}`} onClick={focusSearch}><Search size={19} /><span>Search</span></button>
@@ -442,11 +580,16 @@ export default function Home() {
           <p>LIBRARY</p>
           <button className={section === "My Watchlist" ? "active" : ""} onClick={() => selectSection("My Watchlist")}><Bookmark size={19} /><span>Wishlist</span><em>{watchlist.length}</em></button>
           <button className={section === "Watch History" ? "active" : ""} onClick={() => selectSection("Watch History")}><History size={19} /><span>Watch History</span><em>{historyItems.length}</em></button>
+          <button className={section === "My Dashboard" ? "active" : ""} onClick={() => selectSection("My Dashboard")}><LayoutDashboard size={19} /><span>My Dashboard</span></button>
         </nav>
         <div className="insight-card">
           <div className="insight-icon"><Gauge size={21} /></div><b>Live TMDB Data</b>
           <span>Weekly trending movies and series, updated every 15 minutes.</span>
           <button onClick={() => selectSection("Trends")}>Explore trends <span>→</span></button>
+        </div>
+        <div className="theme-switch" aria-label="Theme mode">
+          <button className={theme === "dark" ? "active" : ""} onClick={() => setTheme("dark")} type="button"><Moon size={14} /> Dark</button>
+          <button className={theme === "light" ? "active" : ""} onClick={() => setTheme("light")} type="button"><Sun size={14} /> Light</button>
         </div>
         <div className="profile"><div className="avatar">AS</div><div><b>Alex Smith</b><span>Analyst</span></div><MoreHorizontal size={18} /></div>
       </aside>
@@ -455,7 +598,7 @@ export default function Home() {
 
       <section className="workspace">
         <div className="content">
-          {!isSearchSection && section !== "Overview" && <div className="title-row">
+          {!isSearchSection && section !== "Overview" && section !== "My Dashboard" && <div className="title-row">
             <div><p className="eyebrow">TMDB ANALYTICS</p><h1>{section === "Overview" ? "Movie & Series Intelligence" : section}</h1><span>{isSearchSection ? searchTerm ? `Search results for “${query}”` : "Start typing in the search bar to find movies and TV shows." : section === "Lumi Picks" ? `Lumi found ${lumiMood.toLowerCase()} picks for "${lumiInput}".` : query ? `Search results for “${query}”` : "This week’s trending entertainment data."}</span></div>
             <div className="live-badge"><i /> LIVE DATA</div>
           </div>}
@@ -476,7 +619,176 @@ export default function Home() {
             <button disabled={!historyItems.length} onClick={clearHistory}><Trash2 size={14} /> Clear history</button>
           </div>}
 
-          {section !== "Watch History" && section !== "Lumi Picks" && !isSearchSection && <div className="filters" aria-label="Catalog filters">
+          {section === "My Dashboard" && <section className="dashboard-welcome">
+            <p>MY DASHBOARD</p>
+            <h2>Welcome back, Shrushti! 👋</h2>
+            <span>Your watch history insights are ready.</span>
+          </section>}
+
+          {section === "My Dashboard" && <section className="dashboard-summary-grid" aria-label="Dashboard summary">
+            <article className="dashboard-summary-card">
+              <span><CheckCircle size={18} /></span>
+              <p>Total Titles Watched</p>
+              <b>{dashboardStats.totalTitles}</b>
+            </article>
+            <article className="dashboard-summary-card">
+              <span><Clock size={18} /></span>
+              <p>Total Watch Time</p>
+              <b>{dashboardStats.totalWatchTime}</b>
+            </article>
+            <article className="dashboard-summary-card">
+              <span><Tv size={18} /></span>
+              <p>Series Completed</p>
+              <b>{dashboardStats.seriesCompleted}</b>
+            </article>
+            <article className="dashboard-summary-card">
+              <span><Star size={18} fill="currentColor" /></span>
+              <p>Average Rating</p>
+              <b>{dashboardStats.averageRating}</b>
+            </article>
+          </section>}
+
+          {section === "My Dashboard" && <section className="dashboard-analytics-grid" aria-label="Dashboard charts">
+            <div className="dashboard-analytics-column">
+              <div className="dashboard-panel" aria-label="Movies versus TV shows dashboard">
+              <div className="dashboard-chart-card">
+              <div className="dashboard-chart-copy">
+                <div className="dashboard-title-icon"><Film size={26} fill="currentColor" /></div>
+                <div>
+                  <h2>Movies vs TV Shows <Sparkles size={20} fill="currentColor" /></h2>
+                  <p>{dashboardMediaSplit.total ? "Understand your watching preference from your watch history." : "Mark movies and TV shows as watched to build your preference chart."}</p>
+                </div>
+              </div>
+              <div className="dashboard-chart-body">
+                <div className="dashboard-percent movie-percent">
+                  <b>{dashboardMediaSplit.moviePercent}%</b>
+                  <span>Movies</span>
+                  <em><i /> Your Preference</em>
+                </div>
+                <div
+                  className={`pie-chart ${dashboardMediaSplit.total ? "" : "empty"}`}
+                  style={{ "--movie-share": `${dashboardMediaSplit.moviePercent}%` }}
+                  role="img"
+                  aria-label={`${dashboardMediaSplit.movies} movies and ${dashboardMediaSplit.tvShows} TV shows`}
+                >
+                  <span><Film size={36} /><i /><Tv size={36} /></span>
+                </div>
+                <div className="dashboard-percent tv-percent">
+                  <b>{dashboardMediaSplit.tvPercent}%</b>
+                  <span>TV Shows</span>
+                  <em><i /> Your Preference</em>
+                </div>
+              </div>
+              <div className="dashboard-stats-row">
+                <div><span><Film size={22} fill="currentColor" /></span><p>Movies Watched</p><b>{dashboardMediaSplit.movies}</b></div>
+                <div><span><Tv size={22} /></span><p>TV Shows Watched</p><b>{dashboardMediaSplit.tvShows}</b></div>
+                <div><span><TrendingUp size={22} /></span><p>Total Watched</p><b>{dashboardMediaSplit.total}</b></div>
+              </div>
+            </div>
+            </div>
+              <div className="dashboard-mini-card activity-calendar-card">
+                <div className="mini-card-head">
+                  <div>
+                    <span>ACTIVITY</span>
+                    <h2>Activity Calendar</h2>
+                  </div>
+                  <History size={18} />
+                </div>
+                <div className="activity-summary">
+                  <div><span>Active days</span><b>{activityCalendar.activeDays}</b></div>
+                  <div><span>Most in a day</span><b>{activityCalendar.maxCount}</b></div>
+                </div>
+                <div className="activity-calendar-grid" aria-label="Last 35 days watched activity">
+                  {activityCalendar.days.map((day) => (
+                    <span
+                      key={day.key}
+                      className={`level-${day.level}`}
+                      title={`${day.label}: ${day.count} watched`}
+                      aria-label={`${day.label}: ${day.count} watched`}
+                    />
+                  ))}
+                </div>
+                <div className="activity-scale"><span>Less</span><i className="level-1" /><i className="level-2" /><i className="level-3" /><i className="level-4" /><span>More</span></div>
+              </div>
+            </div>
+
+            <div className="dashboard-analytics-column">
+              <div className="watch-time-card" aria-label="Watch time by month">
+              <div className="watch-time-head">
+                <div>
+                  <h2>Watch Time</h2>
+                </div>
+                <Clock size={19} />
+              </div>
+              <div className="watch-time-plot">
+                <div className="watch-time-y-axis">
+                  <span>Hours</span>
+                  <span>{watchTimeByMonth.maxHours}</span>
+                  <span>{Math.round(watchTimeByMonth.maxHours / 2)}</span>
+                  <span>0h</span>
+                </div>
+                <div className="watch-time-line-chart">
+                  <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                    <polygon points={watchTimeAreaPoints} />
+                    <polyline points={watchTimePoints} />
+                  </svg>
+                  {watchTimeByMonth.months.map((month) => (
+                    <div
+                      className="watch-time-point"
+                      key={month.key}
+                      style={{ left: `${month.x}%`, top: `${month.y}%` }}
+                    >
+                      <span>{month.hours ? `${Math.round(month.hours)}h` : "0h"}</span>
+                      <i />
+                    </div>
+                  ))}
+                  <div className="watch-time-months">
+                    {watchTimeByMonth.months.map((month) => (
+                      <b key={month.key}>{month.label}</b>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              {!dashboardStats.totalTitles && <p className="watch-time-empty">Mark titles as watched to fill this graph.</p>}
+            </div>
+              <div className="dashboard-mini-card favorite-genres-card">
+                <div className="genre-chart-copy">
+                  <div className="dashboard-title-icon"><Sparkles size={18} fill="currentColor" /></div>
+                  <div>
+                    <h2>Favorite Genres</h2>
+                    <p>{favoriteGenres.genres.length ? "Your most watched genres from history." : "Genres will appear after you mark watched titles."}</p>
+                  </div>
+                </div>
+                <div className="genre-chart-body">
+                  <div className="dashboard-percent genre-primary">
+                    <b>{favoriteGenres.genres[0]?.percent || 0}%</b>
+                    <span>{favoriteGenres.genres[0]?.name || "Genre"}</span>
+                    <em><i /> Top Pick</em>
+                  </div>
+                  <div
+                    className={`genre-pie ${favoriteGenres.genres.length ? "" : "empty"}`}
+                    style={{ background: `conic-gradient(${favoriteGenres.gradient})` }}
+                    role="img"
+                    aria-label="Favorite genres pie chart"
+                  >
+                    <span><Sparkles size={24} /></span>
+                  </div>
+                  <div className="dashboard-percent genre-secondary">
+                    <b>{favoriteGenres.genres[1]?.percent || 0}%</b>
+                    <span>{favoriteGenres.genres[1]?.name || "More"}</span>
+                    <em><i /> Next Best</em>
+                  </div>
+                </div>
+                {favoriteGenres.genres.length > 0 && <div className="genre-stats-row">
+                  {favoriteGenres.genres.slice(0, 3).map((genre) => (
+                    <div key={genre.name}><i style={{ background: genre.color }} /><p>{genre.name}</p><b>{genre.percent}%</b></div>
+                  ))}
+                </div>}
+              </div>
+            </div>
+          </section>}
+
+          {section !== "Watch History" && section !== "Lumi Picks" && section !== "My Dashboard" && !isSearchSection && <div className="filters" aria-label="Catalog filters">
             <label><span>Genre</span><select value={filters.genre} onChange={(event) => updateFilter("genre", event.target.value)}><option value="">All genres</option>{genreOptions.map((genre) => <option key={genre.id} value={genre.id}>{genre.name}</option>)}</select></label>
             <label><span>Country</span><select value={filters.country} onChange={(event) => updateFilter("country", event.target.value)}>{countryOptions.map(([value, label]) => <option key={value || "all"} value={value}>{label}</option>)}</select></label>
             <label><span>Language</span><select value={filters.language} onChange={(event) => updateFilter("language", event.target.value)}>{languageOptions.map(([value, label]) => <option key={value || "all"} value={value}>{label}</option>)}</select></label>
@@ -484,8 +796,8 @@ export default function Home() {
             <button disabled={!hasActiveFilters} onClick={resetFilters}>Reset</button>
           </div>}
 
-          <section className="trending-section">
-            {(!isSearchSection || searchTerm || recentSearchResults.length > 0) && <div className="section-head"><div><h3>{isSearchSection ? searchTerm ? "Search Results" : "Recently Searched" : section === "Lumi Picks" ? `${lumiMood || "Mood"} Picks` : query ? "Search Results" : section === "My Watchlist" ? "Saved Titles" : section === "Watch History" ? "Recently Watched" : "Trending This Week"}</h3><p>{isSearchSection ? "" : section === "Lumi Picks" ? "Movies and series matched to your mood by Lumi" : section === "Watch History" ? "Titles you marked as watched on this device" : "Ratings, popularity and audience votes from TMDB"}</p></div>{(!isSearchSection || searchTerm) && <div className="pager"><button disabled={page === 0} onClick={() => setPage((value) => Math.max(value - 1, 0))}><ChevronLeft size={15} /></button><span>{page + 1}</span><button disabled={(page + 1) * activePageSize >= pageableTotal} onClick={() => setPage((value) => value + 1)}><ChevronRight size={15} /></button></div>}</div>}
+          {section !== "My Dashboard" && <section className="trending-section">
+            {(!isSearchSection || searchTerm || recentSearchResults.length > 0) && <div className="section-head"><div><h3>{isSearchSection ? searchTerm ? "Search Results" : "Recently Searched" : section === "Lumi Picks" ? `${lumiMood || "Mood"} Picks` : query ? "Search Results" : section === "My Watchlist" ? "Saved Titles" : section === "Watch History" ? "Recently Watched" : section === "My Dashboard" ? "Dashboard Picks" : "Trending This Week"}</h3><p>{isSearchSection ? "" : section === "Lumi Picks" ? "Movies and series matched to your mood by Lumi" : section === "Watch History" ? "Titles you marked as watched on this device" : section === "My Dashboard" ? "Your watchlist, history, and trending context in one view" : "Ratings, popularity and audience votes from TMDB"}</p></div>{(!isSearchSection || searchTerm) && <div className="pager"><button disabled={page === 0} onClick={() => setPage((value) => Math.max(value - 1, 0))}><ChevronLeft size={15} /></button><span>{page + 1}</span><button disabled={(page + 1) * activePageSize >= pageableTotal} onClick={() => setPage((value) => value + 1)}><ChevronRight size={15} /></button></div>}</div>}
             <div className={`tmdb-grid ${isSearchSection ? "search-results-grid" : ""} ${loading || lumiLoading ? "is-loading" : ""}`}>
               {visibleItems.map((item, index) => {
                 const key = `${item.mediaType}-${item.id}`;
@@ -508,7 +820,7 @@ export default function Home() {
               {!loading && !lumiLoading && visibleItems.length === 0 && (!isSearchSection || searchTerm) && <div className="empty-state"><Search size={28} /><h3>No titles found</h3><p>{section === "Lumi Picks" ? "Ask Lumi for a mood like funny, romantic, scary, cozy, or thoughtful." : section === "Watch History" ? "Mark titles as watched to build your history." : "Try another search or add titles to your watchlist."}</p></div>}
             </div>
             <p className="tmdb-credit">This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
-          </section>
+          </section>}
         </div>
       </section>
 
@@ -595,12 +907,47 @@ export default function Home() {
               <p>{episodeData?.overview || selectedSeries.overview || "Watch availability and title details from TMDB."}</p>
             </div>
             <div className="episode-header-actions">
-              <button className={watchHistory[`${selectedSeries.mediaType}-${selectedSeries.id}`] ? "watched" : ""} onClick={() => toggleWatched(selectedSeries)} aria-label={`${watchHistory[`${selectedSeries.mediaType}-${selectedSeries.id}`] ? "Remove" : "Mark"} ${selectedSeries.name} watched`}><CheckCircle size={18} /></button>
+              <button className={watchHistory[`${selectedSeries.mediaType}-${selectedSeries.id}`] ? "watched" : ""} onClick={() => toggleWatched({ ...selectedSeries, watchProviders: episodeData?.watchProviders || [] })} aria-label={`${watchHistory[`${selectedSeries.mediaType}-${selectedSeries.id}`] ? "Remove" : "Mark"} ${selectedSeries.name} watched`}><CheckCircle size={18} /></button>
               <button onClick={closeEpisodes} aria-label="Close details"><X size={20} /></button>
             </div>
           </div>
 
-          <div className="detail-stack">
+          <div className={`detail-stack ${selectedSeries.mediaType === "tv" ? "has-episodes" : "movie-detail"}`}>
+          {selectedSeries.mediaType === "tv" && <div className="episode-column">
+          <div className="season-toolbar">
+            <label>
+              Season
+              <select value={selectedSeason} onChange={(event) => { setSelectedSeason(event.target.value); setEpisodeData(null); }}>
+                {(episodeData?.seasons || []).map((season) => (
+                  <option key={season.seasonNumber} value={season.seasonNumber}>
+                    {season.name} ({season.episodeCount})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <small>{episodeData?.episodes?.length || 0} episodes</small>
+          </div>
+          {episodeError && <div className="episode-error">{episodeError}</div>}
+          <section className="episode-list" aria-label={`${selectedSeries.name} episodes`}>
+            {episodesLoading && <p className="provider-empty">Loading episodes...</p>}
+            {!episodesLoading && (episodeData?.episodes || []).map((episode) => (
+              <article className="episode-row" key={episode.id}>
+                <div className="episode-still">
+                  {episode.still ? <img src={episode.still} alt={`${episode.name} still`} width="300" height="169" loading="lazy" decoding="async" /> : <span>Episode {episode.episodeNumber}</span>}
+                </div>
+                <div>
+                  <div className="episode-title">
+                    <b>{episode.episodeNumber}. {episode.name || "Untitled episode"}</b>
+                    <span>{episode.airDate || "Air date unavailable"}</span>
+                  </div>
+                  <p>{episode.overview || "Episode overview is not available."}</p>
+                  <small><Star size={12} fill="currentColor" /> {episode.rating.toFixed(1)}{episode.runtime ? ` · ${episode.runtime} min` : ""}</small>
+                </div>
+              </article>
+            ))}
+            {!episodesLoading && episodeData && !episodeData.episodes?.length && <p className="provider-empty">No episodes available for this season.</p>}
+          </section>
+          </div>}
           <section className="trailer-section">
             <div className="watch-head">
               <h3>Trailers</h3>

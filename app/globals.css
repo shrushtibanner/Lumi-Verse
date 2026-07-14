@@ -130,6 +130,16 @@ button { color: inherit; }
 .app-shell.is-search-page {
   background: var(--bg);
 }
+.app-shell[data-theme="light"] {
+  --bg: #f6f6f7;
+  --surface: #ffffff;
+  --surface-2: #f0f0f2;
+  --border: #dedee2;
+  --text: #171719;
+  --muted: #686872;
+  color: var(--text);
+  background: #f6f6f7;
+}
 .app-shell.is-waiting {
   position: fixed;
   inset: 0;
@@ -235,8 +245,8 @@ button { color: inherit; }
   padding: 27px 16px 20px; display: flex; flex-direction: column; z-index: 20;
 }
 .side-top { display: flex; align-items: center; justify-content: space-between; }
-.logo { display: flex; align-items: center; padding-left: 0; }
-.logo img { width: 176px; height: auto; display: block; object-fit: contain; mix-blend-mode: screen; }
+.logo { display: flex; align-items: center; padding-left: 0; isolation: isolate; }
+.logo img { width: 176px; height: auto; display: block; object-fit: contain; mix-blend-mode: normal; filter: none; }
 .close-menu { display: none; border: 0; background: none; }
 .sidebar nav { margin-top: 39px; flex: 1; }
 .sidebar nav p { color: #56565b; font-size: 9px; font-weight: 700; letter-spacing: 1.7px; margin: 21px 11px 10px; }
@@ -255,6 +265,35 @@ button { color: inherit; }
 .insight-card > span { color: #77777d; font-size: 10px; line-height: 1.5; }
 .insight-card button { border: 0; padding: 11px 0 0; background: transparent; text-align: left; font-size: 10px; color: #ddd; cursor: pointer; }
 .insight-card button span { color: var(--red); margin-left: 5px; }
+.theme-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  margin: 0 2px 14px;
+  padding: 3px;
+  border: 1px solid #29292c;
+  border-radius: 8px;
+  background: #111112;
+}
+.theme-switch button {
+  height: 31px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #85858b;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+}
+.theme-switch button.active {
+  background: var(--red);
+  color: #fff;
+}
+.theme-switch button:not(.active):hover { color: #fff;background:#18181a; }
 .profile { border-top: 1px solid var(--border); padding: 17px 4px 0; display: grid; grid-template-columns: 35px 1fr auto; align-items: center; gap: 10px; }
 .avatar, .header-avatar { background: linear-gradient(145deg,#782127,#d14b53); border: 1px solid #cb4c54; display: grid; place-items: center; font-size: 10px; font-weight: 700; }
 .avatar { width: 35px; height: 35px; border-radius: 50%; }
@@ -291,6 +330,662 @@ h1 { margin: 0 0 7px; font: 700 clamp(24px, 2.3vw, 33px) "Manrope"; letter-spaci
 .history-summary b { font:700 17px "Manrope";color:#eee; }
 .history-summary button { justify-self:end;display:flex;align-items:center;gap:7px;color:#ddd;font-size:10px;font-weight:700;cursor:pointer; }
 .history-summary button:disabled { opacity:.35;cursor:not-allowed; }
+.dashboard-welcome {
+  margin: -8px 0 18px;
+}
+.dashboard-welcome p {
+  margin: 0 0 6px;
+  color: var(--red);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 1.8px;
+}
+.dashboard-welcome h2 {
+  margin: 0 0 5px;
+  font: 800 clamp(26px, 3vw, 38px) "Manrope";
+  color: var(--text);
+  letter-spacing: 0;
+}
+.dashboard-welcome span {
+  color: #77777d;
+  font-size: 12px;
+}
+.dashboard-summary-grid {
+  max-width: 1040px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 18px;
+}
+.dashboard-summary-card {
+  min-height: 118px;
+  border: 1px solid #29292c;
+  border-radius: 8px;
+  background: linear-gradient(145deg, #121213, #0f0f10);
+  padding: 15px;
+  position: relative;
+  overflow: hidden;
+}
+.dashboard-summary-card::after {
+  content: "";
+  position: absolute;
+  width: 74px;
+  height: 74px;
+  right: -38px;
+  top: -38px;
+  border-radius: 50%;
+  background: var(--red);
+  opacity: .055;
+}
+.dashboard-summary-card > span {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: rgba(229, 9, 20, .12);
+  color: var(--red-bright);
+  margin-bottom: 13px;
+}
+.dashboard-summary-card:nth-child(2) > span { background: rgba(59, 130, 255, .12); color: #4d9aff; }
+.dashboard-summary-card:nth-child(3) > span { background: rgba(39, 178, 116, .12); color: #27b274; }
+.dashboard-summary-card:nth-child(4) > span { background: rgba(240, 189, 73, .13); color: #f0bd49; }
+.dashboard-summary-card p {
+  margin: 0 0 7px;
+  color: #77777d;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+}
+.dashboard-summary-card b {
+  font: 800 clamp(20px, 2vw, 28px) "Manrope";
+  color: #f4f4f5;
+  letter-spacing: 0;
+}
+.dashboard-analytics-grid {
+  max-width: 1040px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: stretch;
+  margin: 0 0 18px;
+}
+.dashboard-analytics-column {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 14px;
+  align-content: start;
+}
+.dashboard-panel { min-width: 0; }
+.dashboard-chart-card {
+  height: 100%;
+  min-height: 0;
+  border: 1px solid rgba(255, 42, 62, .38);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 48% 52%, rgba(31, 58, 118, .18), transparent 27%),
+    radial-gradient(circle at 10% 30%, rgba(229, 9, 20, .12), transparent 28%),
+    linear-gradient(145deg, #100b11 0%, #07080c 52%, #090d18 100%);
+  box-shadow: inset 0 0 24px rgba(44, 78, 199, .1), 0 16px 42px rgba(0,0,0,.28);
+  padding: 18px 20px;
+  overflow: hidden;
+  position: relative;
+}
+.dashboard-chart-card::before,
+.dashboard-chart-card::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+.dashboard-chart-card::before {
+  width: 50px;
+  height: 50px;
+  right: 22px;
+  top: 22px;
+  border: 4px solid rgba(255, 42, 62, .12);
+  border-top-width: 8px;
+  border-radius: 9px;
+  transform: rotate(7deg);
+}
+.dashboard-chart-card::after {
+  inset: 8px;
+  border-radius: 9px;
+  border: 1px solid rgba(55, 103, 255, .18);
+  opacity: .75;
+}
+.dashboard-chart-copy,
+.dashboard-chart-body,
+.dashboard-stats-row { position: relative; z-index: 1; }
+.dashboard-chart-copy {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  max-width: 560px;
+}
+.dashboard-title-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: linear-gradient(145deg, #ff3041, #d90613);
+  color: #fff;
+  box-shadow: 0 0 18px rgba(255, 23, 36, .32);
+}
+.dashboard-title-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.dashboard-chart-copy h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  font: 800 20px "Manrope";
+  color: #fff;
+  letter-spacing: 0;
+  text-shadow: 0 5px 18px rgba(0,0,0,.62);
+}
+.dashboard-chart-copy h2 svg { width: 14px; height: 14px; color: #ff3041; filter: drop-shadow(0 0 9px rgba(255, 23, 36, .72)); }
+.dashboard-chart-copy p { margin: 0; color: #bbbcc4; font-size: 11px; line-height: 1.45; }
+.dashboard-chart-body {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 154px minmax(120px, 1fr);
+  align-items: center;
+  gap: 18px;
+  margin: 13px 0 14px;
+}
+.dashboard-percent { display: flex; flex-direction: column; justify-content: center; }
+.dashboard-percent b {
+  font: 800 34px "Manrope";
+  letter-spacing: 0;
+  line-height: .92;
+}
+.dashboard-percent span { margin-top: 7px; color: #fff; font: 800 14px "Manrope"; }
+.dashboard-percent em {
+  width: fit-content;
+  min-height: 26px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 11px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.035);
+  font-style: normal;
+  color: #f4f4f5;
+  font-size: 9px;
+  border: 1px solid currentColor;
+}
+.dashboard-percent em i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; }
+.movie-percent { color: #ff2438; text-align: left; }
+.movie-percent b { text-shadow: 0 0 30px rgba(255, 23, 36, .45); }
+.movie-percent em { color: #ff3344; background: rgba(255, 23, 36, .08); }
+.tv-percent { color: #3b8cff; text-align: right; align-items: flex-end; }
+.tv-percent b { text-shadow: 0 0 30px rgba(59, 140, 255, .46); }
+.tv-percent em { color: #48a0ff; background: rgba(37, 105, 255, .08); }
+.pie-chart {
+  width: 154px;
+  aspect-ratio: 1;
+  justify-self: center;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(#ff1930 0 var(--movie-share), #3b82ff var(--movie-share) 100%);
+  box-shadow: 0 0 0 2px rgba(255,255,255,.65), 0 0 24px rgba(255, 23, 36, .26), 0 0 32px rgba(59, 130, 255, .2);
+  position: relative;
+}
+.pie-chart::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, rgba(255,255,255,.16), transparent 35%);
+  mix-blend-mode: screen;
+  opacity: .7;
+}
+.pie-chart::after {
+  content: "";
+  position: absolute;
+  inset: 39px;
+  border-radius: 50%;
+  background: #08090d;
+  box-shadow: inset 0 0 20px rgba(0,0,0,.75);
+}
+.pie-chart.empty { background: #242426; box-shadow: 0 0 0 4px rgba(255,255,255,.16); }
+.pie-chart > span {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #ff2438;
+}
+.pie-chart > span svg { width: 20px; height: 20px; }
+.pie-chart > span i { width: 1px; height: 38px; background: rgba(255,255,255,.16); }
+.pie-chart > span svg:last-child { color: #3b8cff; }
+.dashboard-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid rgba(255,255,255,.12);
+  padding-top: 13px;
+}
+.dashboard-stats-row div {
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 11px;
+  padding: 0 15px;
+  border-right: 1px solid rgba(255,255,255,.13);
+}
+.dashboard-stats-row div:last-child { border-right: 0; }
+.dashboard-stats-row div > span {
+  grid-row: 1 / 3;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 23, 36, .1);
+  color: #ff2438;
+  border: 1px solid rgba(255, 23, 36, .35);
+  box-shadow: inset 0 0 22px rgba(255, 23, 36, .1);
+}
+.dashboard-stats-row div:nth-child(2) > span { background: rgba(59, 130, 255, .1); color: #6588ff; border-color: rgba(101, 136, 255, .3); }
+.dashboard-stats-row div:nth-child(3) > span { background: rgba(142, 72, 255, .12); color: #9a55ff; border-color: rgba(154, 85, 255, .32); }
+.dashboard-stats-row div > span svg { width: 16px; height: 16px; }
+.dashboard-stats-row p { margin: 0 0 3px; color: #fff; font: 700 11px "Manrope"; }
+.dashboard-stats-row b { font: 800 20px "Manrope"; color: #fff; }
+.watch-time-card {
+  min-width: 0;
+  min-height: 100%;
+  border: 1px solid #29292c;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #121213, #0d0f15);
+  padding: 18px;
+  position: relative;
+  overflow: hidden;
+}
+.watch-time-card::after {
+  content: "";
+  position: absolute;
+  width: 140px;
+  height: 140px;
+  right: -72px;
+  top: -72px;
+  border-radius: 50%;
+  background: #ff2438;
+  opacity: .06;
+}
+.watch-time-head {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.watch-time-head h2 {
+  margin: 0;
+  color: #f4f4f5;
+  font: 800 20px "Manrope";
+}
+.watch-time-head svg { color: #ff3344; }
+.watch-time-plot {
+  position: relative;
+  z-index: 1;
+  min-height: 238px;
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 8px;
+}
+.watch-time-y-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0 0 29px;
+  color: #b5b5bb;
+  font-size: 10px;
+  font-weight: 700;
+}
+.watch-time-line-chart {
+  min-width: 0;
+  position: relative;
+  height: 238px;
+  padding-bottom: 29px;
+  border-bottom: 1px solid #2a2a2e;
+  background:
+    repeating-linear-gradient(to bottom, rgba(255,255,255,.065) 0 1px, transparent 1px 25%),
+    repeating-linear-gradient(to right, rgba(255,255,255,.035) 0 1px, transparent 1px 20%);
+}
+.watch-time-line-chart svg {
+  position: absolute;
+  inset: 0 0 29px;
+  width: 100%;
+  height: calc(100% - 29px);
+  overflow: visible;
+}
+.watch-time-line-chart polygon {
+  fill: url("#watchTimeFill");
+  fill: rgba(255, 23, 36, .12);
+}
+.watch-time-line-chart polyline {
+  fill: none;
+  stroke: #ff3344;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 4px rgba(255, 23, 36, .95));
+  vector-effect: non-scaling-stroke;
+}
+.watch-time-point {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+}
+.watch-time-point span {
+  position: absolute;
+  bottom: 12px;
+  color: #f4f4f5;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+  text-shadow: 0 2px 8px #000;
+}
+.watch-time-point i {
+  width: 11px;
+  height: 11px;
+  border: 2px solid #ffd5d8;
+  border-radius: 50%;
+  background: #ff3344;
+  box-shadow: 0 0 0 3px rgba(255, 23, 36, .18), 0 0 15px rgba(255, 23, 36, .9);
+}
+.watch-time-months {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+}
+.watch-time-months b {
+  color: #c5c5cb;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+}
+.watch-time-empty {
+  position: relative;
+  z-index: 1;
+  margin: 12px 0 0;
+  color: #77777d;
+  font-size: 10px;
+}
+.dashboard-mini-card {
+  min-width: 0;
+  border: 1px solid #29292c;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #121213, #0f0f10);
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.dashboard-mini-card::after {
+  content: "";
+  position: absolute;
+  width: 110px;
+  height: 110px;
+  right: -58px;
+  top: -58px;
+  border-radius: 50%;
+  background: var(--red);
+  opacity: .05;
+}
+.mini-card-head {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.mini-card-head span {
+  color: var(--red-bright);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 1.4px;
+}
+.mini-card-head h2 {
+  margin: 4px 0 0;
+  color: #f4f4f5;
+  font: 800 18px "Manrope";
+}
+.mini-card-head svg { color: var(--red-bright); }
+.genre-chart-copy {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 13px;
+}
+.genre-chart-copy h2 {
+  margin: 0 0 4px;
+  color: #f4f4f5;
+  font: 800 20px "Manrope";
+}
+.genre-chart-copy p {
+  margin: 0;
+  color: #bbbcc4;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.genre-chart-body {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(105px, 1fr) 132px minmax(105px, 1fr);
+  align-items: center;
+  gap: 14px;
+  margin: 12px 0 14px;
+}
+.genre-primary { color: #ff2438; }
+.genre-primary b { text-shadow: 0 0 26px rgba(255, 23, 36, .42); }
+.genre-primary em { color: #ff3344; background: rgba(255, 23, 36, .08); }
+.genre-secondary { color: #3b8cff; text-align: right; align-items: flex-end; }
+.genre-secondary b { text-shadow: 0 0 26px rgba(59, 140, 255, .42); }
+.genre-secondary em { color: #48a0ff; background: rgba(37, 105, 255, .08); }
+.activity-summary {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.activity-summary div {
+  border: 1px solid #29292c;
+  border-radius: 8px;
+  background: #111112;
+  padding: 10px;
+}
+.activity-summary span {
+  display: block;
+  margin-bottom: 4px;
+  color: #77777d;
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+}
+.activity-summary b {
+  color: #f4f4f5;
+  font: 900 22px "Manrope";
+}
+.activity-calendar-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 7px;
+}
+.activity-calendar-grid span,
+.activity-scale i {
+  aspect-ratio: 1;
+  border-radius: 5px;
+  background: #202024;
+  border: 1px solid #2c2c31;
+}
+.activity-calendar-grid .level-1,
+.activity-scale .level-1 { background: rgba(255, 36, 56, .22); border-color: rgba(255, 36, 56, .3); }
+.activity-calendar-grid .level-2,
+.activity-scale .level-2 { background: rgba(255, 36, 56, .42); border-color: rgba(255, 36, 56, .5); }
+.activity-calendar-grid .level-3,
+.activity-scale .level-3 { background: rgba(255, 36, 56, .68); border-color: rgba(255, 36, 56, .76); }
+.activity-calendar-grid .level-4,
+.activity-scale .level-4 { background: #ff2438; border-color: #ff6875; box-shadow: 0 0 12px rgba(255, 36, 56, .35); }
+.activity-scale {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  margin-top: 12px;
+}
+.activity-scale span {
+  color: #77777d;
+  font-size: 9px;
+  font-weight: 800;
+}
+.activity-scale i {
+  width: 12px;
+  height: 12px;
+  aspect-ratio: auto;
+}
+.genre-insight {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 128px 1fr;
+  gap: 16px;
+  align-items: center;
+}
+.genre-pie {
+  width: 132px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(255,255,255,.55), 0 0 24px rgba(255, 23, 36, .2), 0 0 30px rgba(59, 130, 255, .16);
+  position: relative;
+}
+.genre-pie::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, rgba(255,255,255,.16), transparent 35%);
+  mix-blend-mode: screen;
+  opacity: .7;
+}
+.genre-pie::after {
+  content: "";
+  position: absolute;
+  inset: 35px;
+  border-radius: 50%;
+  background: #101011;
+  border: 1px solid #29292c;
+}
+.genre-pie.empty { background: #242426; }
+.genre-pie span {
+  position: relative;
+  z-index: 1;
+  color: #ff2438;
+  display: grid;
+  place-items: center;
+}
+.genre-stats-row {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  border-top: 1px solid rgba(255,255,255,.12);
+  padding-top: 12px;
+}
+.genre-stats-row div {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 9px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 7px;
+  align-items: center;
+}
+.genre-stats-row i {
+  grid-row: 1 / 3;
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+.genre-stats-row p {
+  min-width: 0;
+  margin: 0 0 2px;
+  color: #f4f4f5;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.genre-stats-row b {
+  color: #8f8f95;
+  font-size: 10px;
+  font-weight: 900;
+}
+.genre-list {
+  display: grid;
+  gap: 9px;
+}
+.genre-list div {
+  display: grid;
+  grid-template-columns: 9px 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+.genre-list i {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+.genre-list span {
+  min-width: 0;
+  color: #d5d5d8;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.genre-list b {
+  color: #8f8f95;
+  font-size: 10px;
+  font-weight: 900;
+}
+.mini-empty {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  color: #77777d;
+  font-size: 11px;
+  line-height: 1.55;
+}
 .filters { display: flex; flex-wrap: wrap; gap: 9px; margin: 0 0 16px; }
 .filters button, .filters label { height: 35px; display: flex; align-items: center; gap: 8px; background: #111112; color: #aaaab0; border: 1px solid #29292c; border-radius: 6px; padding: 0 11px; font-size: 10px; }
 .filters label { position: relative; }
@@ -539,8 +1234,13 @@ h1 { margin: 0 0 7px; font: 700 clamp(24px, 2.3vw, 33px) "Manrope"; letter-spaci
 .episode-header button { border:0;background:#18181a;color:#aaa;border-radius:6px;width:34px;height:34px;display:grid;place-items:center;cursor:pointer; }
 .episode-header-actions { display:flex;align-items:center;gap:8px; }
 .episode-header-actions button.watched { color:#fff;background:#23885d; }
-.detail-stack { display:flex;flex-direction:column;min-height:0; }
-.trailer-section { min-width:0;padding:15px 24px; }
+.detail-stack { min-height:0; }
+.detail-stack.has-episodes { display:grid;grid-template-columns:minmax(0,1.08fr) minmax(340px,.92fr);align-items:start; }
+.detail-stack.movie-detail { display:block; }
+.episode-column { min-width:0;border-right:1px solid #202023; }
+.trailer-section { min-width:0;padding:15px 24px 24px; }
+.has-episodes .trailer-section { max-height:calc(100vh - 150px);overflow:auto;scrollbar-width:none;-ms-overflow-style:none; }
+.has-episodes .trailer-section::-webkit-scrollbar { width:0;height:0;display:none; }
 .trailer-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px; }
 .trailer-card { min-width:0;border:1px solid #29292c;border-radius:8px;background:#151516;overflow:hidden; }
 .trailer-card a { position:relative;display:block;aspect-ratio:16 / 9;background:#1b1b1d;color:#fff;text-decoration:none;overflow:hidden; }
@@ -582,11 +1282,155 @@ h1 { margin: 0 0 7px; font: 700 clamp(24px, 2.3vw, 33px) "Manrope"; letter-spaci
 .episode-row p { margin:0;color:#808087;font-size:12px;line-height:1.55; }
 .episode-row small { display:flex;align-items:center;gap:4px;margin-top:9px;color:#a7a7ac;font-size:9px; }
 
+.app-shell[data-theme="light"] .sidebar {
+  background: #ffffff;
+  border-right-color: var(--border);
+}
+.app-shell[data-theme="light"] .sidebar nav p,
+.app-shell[data-theme="light"] .title-row > div:first-child > span,
+.app-shell[data-theme="light"] .section-head p,
+.app-shell[data-theme="light"] .tmdb-info p,
+.app-shell[data-theme="light"] .profile span,
+.app-shell[data-theme="light"] .episode-header p,
+.app-shell[data-theme="light"] .recommendation-header p {
+  color: var(--muted);
+}
+.app-shell[data-theme="light"] .sidebar nav button {
+  color: #686872;
+}
+.app-shell[data-theme="light"] .sidebar nav button:hover {
+  color: #171719;
+  background: #f0f0f2;
+}
+.app-shell[data-theme="light"] .sidebar nav button.active {
+  color: #171719;
+  background: linear-gradient(90deg, rgba(229,9,20,.11), rgba(229,9,20,.02));
+}
+.app-shell[data-theme="light"] .sidebar nav button.search-nav.active {
+  background: transparent;
+}
+.app-shell[data-theme="light"] .insight-card,
+.app-shell[data-theme="light"] .tmdb-card,
+.app-shell[data-theme="light"] .stat-card,
+.app-shell[data-theme="light"] .dashboard-summary-card,
+.app-shell[data-theme="light"] .watch-time-card,
+.app-shell[data-theme="light"] .dashboard-mini-card,
+.app-shell[data-theme="light"] .recommendation-panel,
+.app-shell[data-theme="light"] .recommendation-card,
+.app-shell[data-theme="light"] .episode-panel,
+.app-shell[data-theme="light"] .trailer-card,
+.app-shell[data-theme="light"] .provider-chip,
+.app-shell[data-theme="light"] .episode-row,
+.app-shell[data-theme="light"] .filters label,
+.app-shell[data-theme="light"] .filters button,
+.app-shell[data-theme="light"] .history-summary > div,
+.app-shell[data-theme="light"] .history-summary button,
+.app-shell[data-theme="light"] .search-page-bar,
+.app-shell[data-theme="light"] .theme-switch {
+  background: #ffffff;
+  border-color: var(--border);
+  color: #171719;
+}
+.app-shell[data-theme="light"] .dashboard-chart-card { color: #fff; }
+.app-shell[data-theme="light"] .dashboard-summary-card p {
+  color: var(--muted);
+}
+.app-shell[data-theme="light"] .dashboard-summary-card b {
+  color: #171719;
+}
+.app-shell[data-theme="light"] .watch-time-head h2,
+.app-shell[data-theme="light"] .mini-card-head h2,
+.app-shell[data-theme="light"] .genre-chart-copy h2,
+.app-shell[data-theme="light"] .activity-summary b,
+.app-shell[data-theme="light"] .genre-stats-row p,
+.app-shell[data-theme="light"] .watch-time-months b {
+  color: #171719;
+}
+.app-shell[data-theme="light"] .watch-time-y-axis,
+.app-shell[data-theme="light"] .watch-time-point span,
+.app-shell[data-theme="light"] .watch-time-empty {
+  color: var(--muted);
+}
+.app-shell[data-theme="light"] .genre-pie::after {
+  background: #ffffff;
+  border-color: var(--border);
+}
+.app-shell[data-theme="light"] .genre-list span,
+.app-shell[data-theme="light"] .genre-list b,
+.app-shell[data-theme="light"] .genre-chart-copy p,
+.app-shell[data-theme="light"] .genre-stats-row b,
+.app-shell[data-theme="light"] .mini-empty {
+  color: var(--muted);
+}
+.app-shell[data-theme="light"] .activity-summary div,
+.app-shell[data-theme="light"] .activity-calendar-grid span,
+.app-shell[data-theme="light"] .activity-scale i {
+  background-color: #ececef;
+  border-color: var(--border);
+}
+.app-shell[data-theme="light"] .activity-summary span,
+.app-shell[data-theme="light"] .activity-scale span {
+  color: var(--muted);
+}
+.app-shell[data-theme="light"] .watch-time-line-chart {
+  border-bottom-color: var(--border);
+  background:
+    repeating-linear-gradient(to bottom, rgba(0,0,0,.055) 0 1px, transparent 1px 25%),
+    repeating-linear-gradient(to right, rgba(0,0,0,.035) 0 1px, transparent 1px 20%);
+}
+.app-shell[data-theme="light"] .tmdb-card:hover {
+  border-color: #e1a3a8;
+}
+.app-shell[data-theme="light"] .tmdb-image,
+.app-shell[data-theme="light"] .recommendation-poster,
+.app-shell[data-theme="light"] .trailer-card a,
+.app-shell[data-theme="light"] .episode-still {
+  background: #ececef;
+}
+.app-shell[data-theme="light"] .season-toolbar,
+.app-shell[data-theme="light"] .episode-column,
+.app-shell[data-theme="light"] .watch-section,
+.app-shell[data-theme="light"] .movie-watch {
+  border-color: var(--border);
+}
+.app-shell[data-theme="light"] .season-toolbar select {
+  background: #ffffff;
+  border-color: var(--border);
+  color: #171719;
+}
+.app-shell[data-theme="light"] .title-actions-row button,
+.app-shell[data-theme="light"] .recommendation-header button,
+.app-shell[data-theme="light"] .episode-header button,
+.app-shell[data-theme="light"] .lumi-result-head button {
+  background: #f0f0f2;
+  border-color: var(--border);
+  color: #53535b;
+}
+.app-shell[data-theme="light"] .search-page-bar input,
+.app-shell[data-theme="light"] .search input,
+.app-shell[data-theme="light"] .filters select {
+  color: #171719;
+}
+.app-shell[data-theme="light"] .search-page-bar input::placeholder,
+.app-shell[data-theme="light"] .search input::placeholder {
+  color: #8a8a92;
+}
+.app-shell[data-theme="light"] .theme-switch button {
+  color: #686872;
+}
+.app-shell[data-theme="light"] .theme-switch button:not(.active):hover {
+  color: #171719;
+  background: #f0f0f2;
+}
 @media (max-width: 1050px) {
   .header-brand { display: flex; }
   .header-brand .logo { padding-left: 0; }
   .header-brand .logo img { width: 148px; }
   .search { width: min(430px, 44vw); }
+  .dashboard-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboard-analytics-grid { grid-template-columns:1fr; }
+  .dashboard-chart-body { grid-template-columns: 1fr 148px 1fr; }
+  .dashboard-stats-row div { padding: 0 10px; }
   .stats-grid { grid-template-columns: repeat(2,1fr); }
   .title-grid { grid-template-columns: repeat(2,1fr); }
   .tmdb-grid { grid-template-columns:repeat(2,1fr); }
@@ -606,9 +1450,18 @@ h1 { margin: 0 0 7px; font: 700 clamp(24px, 2.3vw, 33px) "Manrope"; letter-spaci
   .title-row { align-items:flex-start;flex-direction:column; }
   .history-summary { grid-template-columns:1fr 1fr; }
   .history-summary button { justify-self:stretch;grid-column:1 / -1;justify-content:center; }
+  .dashboard-chart-card { min-height:0;padding:16px; }
+  .dashboard-chart-body { grid-template-columns:1fr; }
+  .dashboard-percent { align-items:center;text-align:center; }
+  .dashboard-percent em { display:none; }
+  .dashboard-stats-row { grid-template-columns:repeat(3,1fr);gap:10px; }
+  .dashboard-stats-row div { border-right:0;padding:0; }
   .episode-overlay { padding:12px;place-items:start stretch; }
   .recommendation-overlay { padding:12px;place-items:start stretch; }
   .recommendation-grid { grid-template-columns:repeat(2,minmax(0,1fr));padding:16px; }
+  .detail-stack.has-episodes { display:flex;flex-direction:column; }
+  .episode-column { border-right:0;border-bottom:1px solid #202023; }
+  .has-episodes .trailer-section { max-height:none;overflow:visible; }
   .trailer-grid { grid-template-columns:1fr 1fr; }
   .trailer-card.featured { grid-column:1 / -1;grid-row:auto; }
   .episode-row { grid-template-columns:112px 1fr; }
@@ -633,6 +1486,25 @@ h1 { margin: 0 0 7px; font: 700 clamp(24px, 2.3vw, 33px) "Manrope"; letter-spaci
   }
   .history-summary { grid-template-columns:1fr; }
   .history-summary button { grid-column:auto; }
+  .dashboard-summary-grid { grid-template-columns:1fr; }
+  .dashboard-summary-card { min-height:96px; }
+  .genre-chart-body { grid-template-columns:1fr; }
+  .genre-primary,.genre-secondary { align-items:center;text-align:center; }
+  .genre-primary em,.genre-secondary em { display:none; }
+  .genre-stats-row { grid-template-columns:1fr; }
+  .genre-insight { grid-template-columns:1fr;justify-items:center; }
+  .genre-list { width:100%; }
+  .dashboard-chart-card { padding:14px; }
+  .dashboard-chart-copy { align-items:flex-start; }
+  .dashboard-title-icon { width:34px;height:34px; }
+  .dashboard-chart-copy h2 { font-size:17px; }
+  .dashboard-chart-copy p { font-size:10px; }
+  .pie-chart { width:136px; }
+  .pie-chart::after { inset:35px; }
+  .dashboard-stats-row { grid-template-columns:1fr; }
+  .watch-time-card { padding:14px; }
+  .watch-time-plot { min-height:210px; }
+  .watch-time-line-chart { height:210px; }
   .filters { width:100%; }.filters label,.filters button { flex:1 1 100%;justify-content:space-between; }
   .lumi-floating { right:14px;bottom:14px; }
   .lumi-floating.expanded { left:14px; }
