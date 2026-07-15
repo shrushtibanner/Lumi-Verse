@@ -4,7 +4,10 @@ import {
   Bell, Bookmark, Bot, CheckCircle, ChevronLeft, ChevronRight, Clock, Film, Gauge,
   History, LayoutDashboard, Menu, Moon, MoreHorizontal, PlayCircle, Search, Sparkles, Star, Sun, Trash2, TrendingUp, Tv, X,
 } from "lucide-react";
+import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signOut, updateProfile } from "firebase/auth";
+import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { auth, db } from "./firebase";
 
 const preview = [
   { id: 1, name: "Dune: Part Two", type: "Movie", mediaType: "movie", year: "2024", rating: 8.2, votes: 650000, popularity: 286, genres: ["Science Fiction", "Adventure"], poster: null },
@@ -19,8 +22,10 @@ const countryOptions = [["", "All countries"], ["IN", "India"], ["US", "United S
 const languageOptions = [["", "All languages"], ["en", "English"], ["hi", "Hindi"], ["ta", "Tamil"], ["te", "Telugu"], ["ko", "Korean"], ["ja", "Japanese"], ["fr", "French"], ["es", "Spanish"]];
 const sortOptions = [["popularity.desc", "Most popular"], ["vote_average.desc", "Top rated"], ["primary_release_date.desc", "Newest"]];
 const WATCH_HISTORY_KEY = "cinescope-watch-history";
+const WATCHLIST_KEY = "lumiverse-watchlist";
 const RECENT_SEARCH_RESULTS_KEY = "lumiverse-recent-search-results";
 const THEME_KEY = "lumiverse-theme";
+const FIREBASE_USER_COLLECTION = "users";
 const chartColors = ["#ff2438", "#3b82ff", "#27b274", "#9a55ff", "#f0bd49"];
 const lumiCategories = [
   { key: "popular", emoji: "🍿", label: "Popular Now" },
@@ -70,6 +75,25 @@ function formatWatchTime(minutes) {
   return remainingMinutes ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
 }
 
+function getLibraryItem(item) {
+  return {
+    id: item.id,
+    name: item.name,
+    mediaType: item.mediaType,
+    type: item.type,
+    overview: item.overview || "",
+    poster: item.poster || null,
+    backdrop: item.backdrop || null,
+    year: item.year || "",
+    releaseDate: item.releaseDate || "",
+    rating: Number(item.rating) || 0,
+    votes: Number(item.votes) || 0,
+    popularity: Number(item.popularity) || 0,
+    genres: Array.isArray(item.genres) ? item.genres : [],
+    watchProviders: item.watchProviders || item.providers || item.platforms || [],
+  };
+}
+
 export default function Home() {
   const [showLanding, setShowLanding] = useState(true);
   const [enteringApp, setEnteringApp] = useState(false);
@@ -106,6 +130,15 @@ export default function Home() {
   const [episodeError, setEpisodeError] = useState("");
   const [recentSearchResults, setRecentSearchResults] = useState([]);
   const [theme, setTheme] = useState("dark");
+  const [authUser, setAuthUser] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [authMode, setAuthMode] = useState("signin");
+  const [authName, setAuthName] = useState("");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [landingAuthOpen, setLandingAuthOpen] = useState(false);
   const searchInputRef = useRef(null);
 
   const view = section === "Movies" ? "movie" : section === "Series" ? "tv" : "all";
@@ -239,15 +272,62 @@ export default function Home() {
   }, [historyItems]);
 
   useEffect(() => {
-    try {
-      const savedHistory = localStorage.getItem(WATCH_HISTORY_KEY);
-      if (savedHistory) setWatchHistory(JSON.parse(savedHistory));
-    } catch {
-      setWatchHistory({});
-    } finally {
-      setHistoryReady(true);
+    if (!auth) {
+      setAuthReady(true);
+      return;
     }
+
+    return onAuthStateChanged(auth, (user) => {
+      setAuthUser(user);
+      setAuthReady(true);
+      if (user?.email) setAuthEmail(user.email);
+    });
   }, []);
+
+  useEffect(() => {
+    if (!authReady) return;
+    let cancelled = false;
+    setHistoryReady(false);
+
+    async function loadLibraryData() {
+      let localHistory = {};
+      let localWatchlist = [];
+
+      try {
+        const savedHistory = localStorage.getItem(WATCH_HISTORY_KEY);
+        const savedWatchlist = localStorage.getItem(WATCHLIST_KEY);
+        if (savedHistory) localHistory = JSON.parse(savedHistory);
+        if (savedWatchlist) localWatchlist = JSON.parse(savedWatchlist);
+      } catch {
+        localHistory = {};
+        localWatchlist = [];
+      }
+
+      if (!cancelled) {
+        setWatchHistory(localHistory && typeof localHistory === "object" ? localHistory : {});
+        setWatchlist(Array.isArray(localWatchlist) ? localWatchlist : []);
+      }
+
+      if (db && authUser) {
+        try {
+          const userRef = doc(db, FIREBASE_USER_COLLECTION, authUser.uid);
+          const snapshot = await getDoc(userRef);
+          if (!cancelled && snapshot.exists()) {
+            const data = snapshot.data();
+            setWatchHistory(data.watchHistory && typeof data.watchHistory === "object" ? data.watchHistory : {});
+            setWatchlist(Array.isArray(data.watchlist) ? data.watchlist : []);
+          }
+        } catch (firebaseError) {
+          console.warn("Unable to load library data from Firebase", firebaseError);
+        }
+      }
+
+      if (!cancelled) setHistoryReady(true);
+    }
+
+    loadLibraryData();
+    return () => { cancelled = true; };
+  }, [authReady, authUser]);
 
   useEffect(() => {
     try {
@@ -270,7 +350,24 @@ export default function Home() {
   useEffect(() => {
     if (!historyReady) return;
     localStorage.setItem(WATCH_HISTORY_KEY, JSON.stringify(watchHistory));
-  }, [historyReady, watchHistory]);
+    localStorage.setItem(WATCHLIST_KEY, JSON.stringify(watchlist));
+
+    if (!db || !authUser) return;
+    const saveTimer = window.setTimeout(() => {
+      const userRef = doc(db, FIREBASE_USER_COLLECTION, authUser.uid);
+      setDoc(userRef, {
+        displayName: authUser.displayName || "",
+        email: authUser.email || "",
+        watchHistory,
+        watchlist,
+        updatedAt: serverTimestamp(),
+      }, { merge: true }).catch((firebaseError) => {
+        console.warn("Unable to save library data to Firebase", firebaseError);
+      });
+    }, 350);
+
+    return () => window.clearTimeout(saveTimer);
+  }, [authUser, historyReady, watchHistory, watchlist]);
 
   useEffect(() => {
     setPage(0);
@@ -422,6 +519,52 @@ export default function Home() {
     setMobileNav(false);
     window.setTimeout(() => searchInputRef.current?.focus(), 0);
   };
+  const handleAuthSubmit = async (event) => {
+    event.preventDefault();
+    if (!auth) {
+      setAuthError("Firebase is not configured.");
+      return;
+    }
+    if (!authEmail.trim() || !authPassword) {
+      setAuthError("Enter email and password.");
+      return;
+    }
+
+    setAuthLoading(true);
+    setAuthError("");
+    try {
+      if (authMode === "signup") {
+        const credential = await createUserWithEmailAndPassword(auth, authEmail.trim(), authPassword);
+        if (authName.trim()) await updateProfile(credential.user, { displayName: authName.trim() });
+      } else {
+        await signInWithEmailAndPassword(auth, authEmail.trim(), authPassword);
+      }
+      setAuthPassword("");
+    } catch (firebaseError) {
+      const message = firebaseError.code === "auth/operation-not-allowed"
+        ? "Enable Email/Password in Firebase Auth."
+        : firebaseError.code === "auth/email-already-in-use"
+          ? "Email already exists. Log in."
+          : firebaseError.code === "auth/invalid-credential"
+            ? "Wrong email or password."
+            : firebaseError.message;
+      setAuthError(message);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+  const handleSignOut = async () => {
+    if (!auth) return;
+    setAuthLoading(true);
+    setAuthError("");
+    try {
+      await signOut(auth);
+    } catch (firebaseError) {
+      setAuthError(firebaseError.message);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
   const toggleWatchlist = (item) => {
     const key = `${item.mediaType}-${item.id}`;
     setWatchlist((current) => current.includes(key) ? current.filter((id) => id !== key) : [...current, key]);
@@ -439,22 +582,7 @@ export default function Home() {
         [key]: {
           key,
           watchedAt: new Date().toISOString(),
-          item: {
-            id: item.id,
-            name: item.name,
-            mediaType: item.mediaType,
-            type: item.type,
-            overview: item.overview || "",
-            poster: item.poster,
-            backdrop: item.backdrop,
-            year: item.year,
-            releaseDate: item.releaseDate || "",
-            rating: item.rating,
-            votes: item.votes,
-            popularity: item.popularity,
-            genres: item.genres || [],
-            watchProviders: item.watchProviders || item.providers || item.platforms || [],
-          },
+          item: getLibraryItem(item),
         },
       };
     });
@@ -565,12 +693,43 @@ export default function Home() {
     {showLanding && (
       <main className={`landing-screen ${enteringApp ? "is-entering" : ""}`}>
         <div className="landing-hero">
-          <button type="button" onClick={enterApp} disabled={enteringApp}>Enter</button>
+          <div className="landing-actions">
+            <button className="landing-enter" type="button" onClick={enterApp} disabled={enteringApp}>Enter</button>
+            {authUser
+              ? <button className="landing-enter landing-auth-pill" type="button" onClick={() => setLandingAuthOpen(true)}>Account</button>
+              : <>
+                <button className="landing-enter landing-auth-pill" type="button" onClick={() => { setAuthMode("signin"); setAuthError(""); setLandingAuthOpen(true); }}>Log in</button>
+                <button className="landing-enter landing-auth-pill" type="button" onClick={() => { setAuthMode("signup"); setAuthError(""); setLandingAuthOpen(true); }}>Sign up</button>
+              </>}
+          </div>
         </div>
+        {landingAuthOpen && <div className={`landing-auth-overlay ${authMode === "signup" ? "signup-popup" : "login-popup"}`} role="dialog" aria-modal="true" aria-label={`${authMode === "signup" ? "Sign up" : "Log in"} to LumiVerse`}>
+          <button className="landing-auth-backdrop" type="button" onClick={() => setLandingAuthOpen(false)} aria-label="Close login" />
+          <div className="landing-auth-card">
+            <button className="landing-auth-close" type="button" onClick={() => setLandingAuthOpen(false)} aria-label="Close login"><X size={16} /></button>
+            {authUser ? <>
+              <div className="landing-auth-user">
+                <span>{(authUser.displayName || authUser.email || "S").slice(0, 1).toUpperCase()}</span>
+                <div><b>{authUser.displayName || "Signed in"}</b><p>{authUser.email}</p></div>
+              </div>
+                <button className="landing-auth-submit" type="button" onClick={handleSignOut} disabled={authLoading}>{authLoading ? "Wait..." : "Sign out"}</button>
+              </> : <form onSubmit={handleAuthSubmit}>
+              <h2>{authMode === "signup" ? "Sign up" : "Log in"}</h2>
+              <input value={authName} onChange={(event) => setAuthName(event.target.value)} placeholder="Name" autoComplete="name" />
+              <input autoFocus value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} placeholder="Email" type="email" autoComplete="email" />
+              <input value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} placeholder="Password" type="password" autoComplete={authMode === "signup" ? "new-password" : "current-password"} />
+              {authError && <p>{authError}</p>}
+              <button className="landing-auth-submit" type="submit" disabled={authLoading}>{authLoading ? "Wait..." : authMode === "signup" ? "Create account" : "Log in"}</button>
+            </form>}
+          </div>
+        </div>}
       </main>
     )}
 
     <main className={`app-shell ${isSearchSection ? "is-search-page" : ""} ${showLanding ? "is-waiting" : ""} ${enteringApp ? "is-revealing" : ""}`} data-theme={theme}>
+      <button className="sidebar-toggle" onClick={() => setMobileNav(true)} aria-label="Open sidebar" aria-expanded={mobileNav}>
+        <Menu size={20} />
+      </button>
       <aside className={`sidebar ${mobileNav ? "open" : ""}`}>
         <div className="side-top"><Logo theme={theme} /><button className="close-menu" onClick={() => setMobileNav(false)} aria-label="Close menu"><X size={20} /></button></div>
         <nav>
@@ -591,13 +750,13 @@ export default function Home() {
           <button className={theme === "dark" ? "active" : ""} onClick={() => setTheme("dark")} type="button"><Moon size={14} /> Dark</button>
           <button className={theme === "light" ? "active" : ""} onClick={() => setTheme("light")} type="button"><Sun size={14} /> Light</button>
         </div>
-        <div className="profile"><div className="avatar">AS</div><div><b>Alex Smith</b><span>Analyst</span></div><MoreHorizontal size={18} /></div>
+        <div className="profile"><div className="avatar">SB</div><div><b>Shrushti Banner</b><span>Analyst</span></div><MoreHorizontal size={18} /></div>
       </aside>
 
       {mobileNav && <button className="scrim" onClick={() => setMobileNav(false)} aria-label="Close menu" />}
 
       <section className="workspace">
-        <div className="content">
+        <div className={`content ${section === "My Dashboard" ? "dashboard-content" : ""}`}>
           {!isSearchSection && section !== "Overview" && section !== "My Dashboard" && <div className="title-row">
             <div><p className="eyebrow">TMDB ANALYTICS</p><h1>{section === "Overview" ? "Movie & Series Intelligence" : section}</h1><span>{isSearchSection ? searchTerm ? `Search results for “${query}”` : "Start typing in the search bar to find movies and TV shows." : section === "Lumi Picks" ? `Lumi found ${lumiMood.toLowerCase()} picks for "${lumiInput}".` : query ? `Search results for “${query}”` : "This week’s trending entertainment data."}</span></div>
             <div className="live-badge"><i /> LIVE DATA</div>
