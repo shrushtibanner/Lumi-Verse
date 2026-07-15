@@ -94,6 +94,14 @@ function getLibraryItem(item) {
   };
 }
 
+function getLibraryStorageKeys(userId) {
+  const owner = userId || "guest";
+  return {
+    history: `${WATCH_HISTORY_KEY}:${owner}`,
+    watchlist: `${WATCHLIST_KEY}:${owner}`,
+  };
+}
+
 export default function Home() {
   const [showLanding, setShowLanding] = useState(true);
   const [enteringApp, setEnteringApp] = useState(false);
@@ -292,10 +300,11 @@ export default function Home() {
     async function loadLibraryData() {
       let localHistory = {};
       let localWatchlist = [];
+      const storageKeys = getLibraryStorageKeys(authUser?.uid);
 
       try {
-        const savedHistory = localStorage.getItem(WATCH_HISTORY_KEY);
-        const savedWatchlist = localStorage.getItem(WATCHLIST_KEY);
+        const savedHistory = localStorage.getItem(storageKeys.history);
+        const savedWatchlist = localStorage.getItem(storageKeys.watchlist);
         if (savedHistory) localHistory = JSON.parse(savedHistory);
         if (savedWatchlist) localWatchlist = JSON.parse(savedWatchlist);
       } catch {
@@ -314,8 +323,12 @@ export default function Home() {
           const snapshot = await getDoc(userRef);
           if (!cancelled && snapshot.exists()) {
             const data = snapshot.data();
-            setWatchHistory(data.watchHistory && typeof data.watchHistory === "object" ? data.watchHistory : {});
-            setWatchlist(Array.isArray(data.watchlist) ? data.watchlist : []);
+            const firebaseHistory = data.watchHistory && typeof data.watchHistory === "object" ? data.watchHistory : {};
+            const firebaseWatchlist = Array.isArray(data.watchlist) ? data.watchlist : [];
+            setWatchHistory(firebaseHistory);
+            setWatchlist(firebaseWatchlist);
+            localStorage.setItem(storageKeys.history, JSON.stringify(firebaseHistory));
+            localStorage.setItem(storageKeys.watchlist, JSON.stringify(firebaseWatchlist));
           }
         } catch (firebaseError) {
           console.warn("Unable to load library data from Firebase", firebaseError);
@@ -349,8 +362,9 @@ export default function Home() {
 
   useEffect(() => {
     if (!historyReady) return;
-    localStorage.setItem(WATCH_HISTORY_KEY, JSON.stringify(watchHistory));
-    localStorage.setItem(WATCHLIST_KEY, JSON.stringify(watchlist));
+    const storageKeys = getLibraryStorageKeys(authUser?.uid);
+    localStorage.setItem(storageKeys.history, JSON.stringify(watchHistory));
+    localStorage.setItem(storageKeys.watchlist, JSON.stringify(watchlist));
 
     if (!db || !authUser) return;
     const saveTimer = window.setTimeout(() => {
@@ -559,6 +573,8 @@ export default function Home() {
     setAuthError("");
     try {
       await signOut(auth);
+      setWatchHistory({});
+      setWatchlist([]);
     } catch (firebaseError) {
       setAuthError(firebaseError.message);
     } finally {

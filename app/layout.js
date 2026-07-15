@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "CineScope — Movie & Series Analytics",
+  title: "LumiVerse",
   description: "A cinematic intelligence dashboard for movies and series.",
 };
 
