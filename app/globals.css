@@ -34,7 +34,7 @@ button { color: inherit; }
   padding: 0;
   background:
     linear-gradient(rgba(5, 5, 6, .34), rgba(5, 5, 6, .34)),
-    url("/lumi-verse-landing-s.png") center center / cover no-repeat,
+    url("/lumi-verse-landing-no-n.png") center center / cover no-repeat,
     #050506;
   isolation: isolate;
   transition: opacity .75s ease, filter .75s ease;
@@ -43,7 +43,7 @@ button { color: inherit; }
   content: "";
   position: absolute;
   inset: 0;
-  background: url("/lumi-verse-landing-s.png") center center / min(108vw, calc(108vh * 1.7778)) auto no-repeat;
+  background: url("/lumi-verse-landing-no-n.png") center center / min(108vw, calc(108vh * 1.7778)) auto no-repeat;
   filter: brightness(1.08) contrast(1.05);
   opacity: 1;
   pointer-events: none;
@@ -1643,7 +1643,7 @@ h1 { margin: 0 0 7px; font: 700 clamp(24px, 2.3vw, 33px) "Manrope"; letter-spaci
   .landing-screen {
     background:
       linear-gradient(rgba(5, 5, 6, .34), rgba(5, 5, 6, .34)),
-      url("/lumi-verse-landing-s.png") center center / cover no-repeat,
+      url("/lumi-verse-landing-no-n.png") center center / cover no-repeat,
       #050506;
   }
   .landing-screen::before {
